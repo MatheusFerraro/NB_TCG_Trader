@@ -1,0 +1,65 @@
+## ---------------------------------------------------------------------------
+## .NET / Visual Studio
+## ---------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Xx]64/
+[Xx]86/
+[Bb]uild/
+artifacts/
+
+# User-specific / IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Rider
+.idea/
+*.sln.iml
+
+# Test results / coverage
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+TestResults/
+
+## ---------------------------------------------------------------------------
+## Node / Vite (web/)
+## ---------------------------------------------------------------------------
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+## ---------------------------------------------------------------------------
+## Secrets & environment
+## ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pfx
+appsettings.*.local.json
+secrets.json
+
+## ---------------------------------------------------------------------------
+## OS cruft
+## ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db

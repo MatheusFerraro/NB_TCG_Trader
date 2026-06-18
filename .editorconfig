@@ -1,0 +1,43 @@
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+# C#
+[*.cs]
+indent_size = 4
+# Treat nullable warnings seriously (CLAUDE.md §14)
+dotnet_diagnostic.CS8600.severity = warning
+dotnet_diagnostic.CS8602.severity = warning
+dotnet_diagnostic.CS8603.severity = warning
+dotnet_diagnostic.CS8625.severity = warning
+# Prefer file-scoped namespaces, var, and modern C# idioms
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_prefer_braces = true:suggestion
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Project / config files
+[*.{csproj,props,targets}]
+indent_size = 2
+
+[*.{json,jsonc}]
+indent_size = 2
+
+# Web (TypeScript / React)
+[*.{ts,tsx,js,jsx,cjs,mjs}]
+indent_size = 2
+
+[*.{css,scss,html}]
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

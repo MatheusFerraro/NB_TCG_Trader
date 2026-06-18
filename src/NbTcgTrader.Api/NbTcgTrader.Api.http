@@ -1,0 +1,6 @@
+@NbTcgTrader.Api_HostAddress = http://localhost:5167
+
+GET {{NbTcgTrader.Api_HostAddress}}/health
+Accept: application/json
+
+###
