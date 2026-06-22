@@ -10,6 +10,10 @@ COPY global.json ./
 
 # Restore as its own layer for caching. Only the API project ships in the image;
 # the test project is excluded on purpose.
+# NOTE: if root-level build inputs are introduced (Directory.Build.props/.targets,
+# Directory.Packages.props, NuGet.config), copy them here BEFORE restore so the
+# container restore matches local/CI. None exist yet, and COPY errors on missing
+# sources, so they are not listed pre-emptively.
 COPY src/NbTcgTrader.Api/NbTcgTrader.Api.csproj src/NbTcgTrader.Api/
 RUN dotnet restore src/NbTcgTrader.Api/NbTcgTrader.Api.csproj
 
