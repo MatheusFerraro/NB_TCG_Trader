@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nbtcg}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nbtcg_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-nbtcg}
+    ports:
+      # Bound to localhost so the dev DB is reachable by host tooling (psql,
+      # DBeaver) but not exposed on the LAN.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nbtcg} -d ${POSTGRES_DB:-nbtcg}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      # Single source for the credentials (see .env.example); the literal is not
+      # duplicated. Service name "db" resolves on the compose network. Used by
+      # EF/Npgsql in #5.
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-nbtcg};Username=${POSTGRES_USER:-nbtcg};Password=${POSTGRES_PASSWORD:-nbtcg_dev_password}"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
