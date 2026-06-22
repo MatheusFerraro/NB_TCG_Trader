@@ -1,0 +1,28 @@
+# Build context is the repo root. Keep the SDK image lean: ship only what the
+# API build needs.
+
+# .NET build output
+**/bin/
+**/obj/
+
+# Tests are not part of the runtime image
+tests/
+
+# Frontend
+web/
+**/node_modules/
+**/dist/
+
+# VCS & IDE
+.git/
+.gitignore
+**/.vs/
+.vscode/
+.idea/
+
+# Secrets / local env
+.env
+.env.*
+
+# Docs & plans (not needed in the image)
+*.md
