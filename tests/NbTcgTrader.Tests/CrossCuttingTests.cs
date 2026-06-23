@@ -6,6 +6,7 @@ namespace NbTcgTrader.Tests;
 
 // Integration tests for the cross-cutting pipeline wired in Program.cs (#3):
 // health endpoint, and the ProblemDetails error contract on a failure path.
+[Collection(IntegrationTestCollection.Name)]
 public class CrossCuttingTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
@@ -33,5 +34,36 @@ public class CrossCuttingTests : IClassFixture<WebApplicationFactory<Program>>
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         response.Content.Headers.ContentType?.MediaType
             .ShouldBe("application/problem+json");
+    }
+
+    // The test host runs in Development, where Cors:AllowedOrigins = [http://localhost:5173].
+
+    [Fact]
+    public async Task Cors_preflight_from_allowed_origin_gets_allow_origin_header()
+    {
+        var client = _factory.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/health");
+        request.Headers.Add("Origin", "http://localhost:5173");
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+
+        var response = await client.SendAsync(request);
+
+        response.Headers.GetValues("Access-Control-Allow-Origin")
+            .ShouldContain("http://localhost:5173");
+    }
+
+    [Fact]
+    public async Task Cors_preflight_from_disallowed_origin_gets_no_allow_origin_header()
+    {
+        var client = _factory.CreateClient();
+
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/health");
+        request.Headers.Add("Origin", "http://evil.example.com");
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+
+        var response = await client.SendAsync(request);
+
+        response.Headers.Contains("Access-Control-Allow-Origin").ShouldBeFalse();
     }
 }

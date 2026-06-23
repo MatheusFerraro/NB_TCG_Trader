@@ -64,14 +64,21 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+// WebApplicationFactory (integration tests) and EF design-time tools deliberately
+// stop the host: HostAbortedException, or the internal StopTheHostException thrown
+// during Build(). Let those propagate instead of treating them as a fatal crash.
+catch (Exception ex) when (ex is not HostAbortedException
+                           && ex.GetType().Name is not "StopTheHostException")
 {
     Log.Fatal(ex, "Application terminated unexpectedly");
+    return 1; // non-zero so orchestrators/CI detect a failed boot
 }
 finally
 {
     Log.CloseAndFlush();
 }
+
+return 0;
 
 // Exposed so WebApplicationFactory<Program> can host the app in integration tests.
 public partial class Program;

@@ -25,10 +25,13 @@ public sealed class GlobalExceptionHandler(
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 
+        // Deliberately do NOT attach the Exception to the ProblemDetailsContext.
+        // The exception is already logged above; leaving it off the context
+        // guarantees no problem-details writer can serialize its message or stack
+        // trace into the response, in any environment (CLAUDE.md §15).
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
-            Exception = exception,
             ProblemDetails = new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,
