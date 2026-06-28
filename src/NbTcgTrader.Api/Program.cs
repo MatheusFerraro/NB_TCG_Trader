@@ -18,7 +18,7 @@ try
         .ReadFrom.Services(services)
         .Enrich.FromLogContext());
 
-    builder.Services.AddOpenApi();
+    builder.Services.AddApiOpenApi();
 
     // Uniform error contract: ProblemDetails for every failure, with a traceId
     // for correlation. The handler keeps exception detail out of responses.
@@ -47,7 +47,8 @@ try
 
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
+        // OpenAPI JSON + Scalar UI at /scalar (Development only).
+        app.MapApiDocs();
     }
     else
     {
