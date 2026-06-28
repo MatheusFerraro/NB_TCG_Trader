@@ -29,10 +29,12 @@ internal sealed class BearerSecuritySchemeTransformer : IOpenApiDocumentTransfor
         document.Components ??= new OpenApiComponents();
         document.Components.SecuritySchemes[SchemeName] = new OpenApiSecurityScheme
         {
+            // type: http + scheme: bearer => the token is always read from the
+            // Authorization header. `In` is only meaningful for apiKey schemes,
+            // so it is intentionally omitted here.
             Type = SecuritySchemeType.Http,
             Scheme = "bearer",
             BearerFormat = "JWT",
-            In = ParameterLocation.Header,
             Description = "Paste a JWT access token. The 'Bearer ' prefix is added automatically.",
         };
 
