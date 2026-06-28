@@ -69,7 +69,7 @@ public class CrossCuttingTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     // The docs surface (OpenAPI JSON + Scalar UI) is Development-only; the test
-    // host runs in Development, so both are served here (#5, CLAUDE.md §10).
+    // host runs in Development, so both are served here (#4, CLAUDE.md §10).
 
     [Fact]
     public async Task OpenApi_document_declares_the_bearer_security_scheme()
@@ -82,6 +82,9 @@ public class CrossCuttingTests : IClassFixture<WebApplicationFactory<Program>>
 
         await using var stream = await response.Content.ReadAsStreamAsync();
         using var doc = await JsonDocument.ParseAsync(stream);
+
+        doc.RootElement.GetProperty("paths")
+            .TryGetProperty("/health", out _).ShouldBeTrue(); 
 
         var bearer = doc.RootElement
             .GetProperty("components")
@@ -101,5 +104,11 @@ public class CrossCuttingTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.GetAsync("/scalar");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        
+        response.Content.Headers.ContentType?.MediaType
+            .ShouldBe("text/html");
+        
+        var html = await response.Content.ReadAsStringAsync();
+        html.ShouldContain("NB TCG Trader API");
     }
 }
