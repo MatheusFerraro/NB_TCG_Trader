@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Shouldly;
 
@@ -65,5 +66,40 @@ public class CrossCuttingTests : IClassFixture<WebApplicationFactory<Program>>
         var response = await client.SendAsync(request);
 
         response.Headers.Contains("Access-Control-Allow-Origin").ShouldBeFalse();
+    }
+
+    // The docs surface (OpenAPI JSON + Scalar UI) is Development-only; the test
+    // host runs in Development, so both are served here (#5, CLAUDE.md §10).
+
+    [Fact]
+    public async Task OpenApi_document_declares_the_bearer_security_scheme()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/openapi/v1.json");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var doc = await JsonDocument.ParseAsync(stream);
+
+        var bearer = doc.RootElement
+            .GetProperty("components")
+            .GetProperty("securitySchemes")
+            .GetProperty("Bearer");
+
+        bearer.GetProperty("type").GetString().ShouldBe("http");
+        bearer.GetProperty("scheme").GetString().ShouldBe("bearer");
+        bearer.GetProperty("bearerFormat").GetString().ShouldBe("JWT");
+    }
+
+    [Fact]
+    public async Task Scalar_ui_is_served()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/scalar");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 }
