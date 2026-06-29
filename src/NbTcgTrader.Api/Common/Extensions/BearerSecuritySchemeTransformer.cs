@@ -12,10 +12,9 @@ namespace NbTcgTrader.Api.Common.Extensions;
 /// <remarks>
 /// This is the MS-documented <c>BearerSecuritySchemeTransformer</c> pattern,
 /// simplified: the reference sample gates on <c>IAuthenticationSchemeProvider</c>
-/// detecting a registered JWT scheme, but auth is not wired yet (see CLAUDE.md
-/// §15), so the scheme is declared unconditionally. When the Auth slice lands,
-/// add per-endpoint security <em>requirements</em> via an operation transformer
-/// (skipping <c>[AllowAnonymous]</c> endpoints).
+/// detecting a registered JWT scheme; the scheme is declared unconditionally here.
+/// Per-endpoint security <em>requirements</em> (skipping <c>[AllowAnonymous]</c>
+/// endpoints) are added by <see cref="AuthorizationOperationTransformer"/>.
 /// </remarks>
 internal sealed class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer
 {
