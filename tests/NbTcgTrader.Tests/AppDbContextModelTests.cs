@@ -45,7 +45,7 @@ public class AppDbContextModelTests
     }
 
     [Fact]
-    public void Card_is_indexed_on_game_name_and_external_id()
+    public void Card_is_indexed_on_game_id_and_name_and_external_id()
     {
         using var context = CreateContext();
 
