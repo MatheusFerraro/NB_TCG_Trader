@@ -18,5 +18,12 @@ public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting(
             "ConnectionStrings:Default",
             "Host=localhost;Port=5432;Database=nbtcg_test_unused;Username=test;Password=test");
+
+        // Auth wiring validates the Jwt config on startup (ValidateOnStart), so the
+        // host needs a valid signing key (>= 32 bytes) + issuer/audience to boot —
+        // even for tests that never authenticate. A throwaway test key is fine here.
+        builder.UseSetting("Jwt:SigningKey", TestJwt.SigningKey);
+        builder.UseSetting("Jwt:Issuer", TestJwt.Issuer);
+        builder.UseSetting("Jwt:Audience", TestJwt.Audience);
     }
 }

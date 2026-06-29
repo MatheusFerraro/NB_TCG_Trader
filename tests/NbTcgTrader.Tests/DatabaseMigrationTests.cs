@@ -66,6 +66,7 @@ public sealed class DatabaseMigrationTests : IAsyncLifetime
         tables.ShouldContain("CollectionItems");
         tables.ShouldContain("ImportJobs");
         tables.ShouldContain("ImportRows");
+        tables.ShouldContain("RefreshTokens");
     }
 
     private static async Task<List<string>> GetPublicTableNamesAsync(string connectionString)

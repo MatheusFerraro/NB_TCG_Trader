@@ -96,6 +96,30 @@ public class CrossCuttingTests : IClassFixture<ApiWebApplicationFactory>
     }
 
     [Fact]
+    public async Task OpenApi_marks_protected_endpoints_with_a_security_requirement()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/openapi/v1.json");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        using var doc = await JsonDocument.ParseAsync(stream);
+
+        var paths = doc.RootElement.GetProperty("paths");
+
+        // /auth/me requires authorization → it carries a security requirement.
+        paths.GetProperty("/auth/me").GetProperty("get")
+            .TryGetProperty("security", out _).ShouldBeTrue();
+
+        // Anonymous endpoints stay open: no per-operation security requirement.
+        paths.GetProperty("/auth/login").GetProperty("post")
+            .TryGetProperty("security", out _).ShouldBeFalse();
+        paths.GetProperty("/health").GetProperty("get")
+            .TryGetProperty("security", out _).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Scalar_ui_is_served()
     {
         var client = _factory.CreateClient();
