@@ -28,13 +28,15 @@ public sealed class RefreshHandler(
     public async Task<IResult> HandleAsync(RefreshRequest request, CancellationToken cancellationToken)
     {
         var hash = tokens.HashRefreshToken(request.RefreshToken);
+        var now = DateTimeOffset.UtcNow;
 
         var stored = await db.RefreshTokens
+            .AsNoTracking()
             .SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
 
         // Unknown, already-used (revoked), or expired tokens are all rejected the
         // same way (CLAUDE.md §15).
-        if (stored is null || !stored.IsActive(DateTimeOffset.UtcNow))
+        if (stored is null || !stored.IsActive(now))
         {
             return InvalidToken();
         }
@@ -45,13 +47,36 @@ public sealed class RefreshHandler(
             return InvalidToken();
         }
 
-        // Rotate: issue the successor first so we can chain the old token to it,
-        // then revoke the old one. Both saves happen in IssueAsync / here.
+        // Rotation must be single-use and all-or-nothing under concurrency
+        // (CLAUDE.md §15). Wrap revoke + issue in one transaction so they commit
+        // together or not at all.
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // Atomically revoke: the conditional WHERE means only the first of any
+        // concurrent refreshes flips RevokedAt and sees revoked == 1. A loser sees
+        // 0 and is rejected, so a token can never mint two successors.
+        var revoked = await db.RefreshTokens
+            .Where(t => t.Id == stored.Id && t.RevokedAt == null)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(t => t.RevokedAt, now),
+                cancellationToken);
+
+        if (revoked == 0)
+        {
+            return InvalidToken();
+        }
+
         var response = await issuer.IssueAsync(user, cancellationToken);
 
-        stored.RevokedAt = DateTimeOffset.UtcNow;
-        stored.ReplacedByTokenHash = tokens.HashRefreshToken(response.RefreshToken);
-        await db.SaveChangesAsync(cancellationToken);
+        // Chain the revoked token to its successor for audit (CLAUDE.md §15).
+        await db.RefreshTokens
+            .Where(t => t.Id == stored.Id)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    t => t.ReplacedByTokenHash, tokens.HashRefreshToken(response.RefreshToken)),
+                cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
 
         return Results.Ok(response);
     }

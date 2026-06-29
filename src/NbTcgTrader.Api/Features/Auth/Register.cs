@@ -69,6 +69,9 @@ public sealed class RegisterHandler(UserManager<AppUser> users, TokenIssuer issu
         }
 
         var response = await issuer.IssueAsync(user, cancellationToken);
-        return Results.Created($"/auth/users/{user.Id}", response);
+
+        // The created user is retrievable at /auth/me with the returned access token;
+        // there is no public /auth/users/{id} route to point at.
+        return Results.Created("/auth/me", response);
     }
 }

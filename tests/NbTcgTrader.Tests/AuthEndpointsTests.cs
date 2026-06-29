@@ -149,6 +149,26 @@ public sealed class AuthEndpointsTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Concurrent_refresh_of_the_same_token_lets_exactly_one_win()
+    {
+        var client = CreateClient();
+        var email = UniqueEmail();
+        var registered = await ReadAuthAsync(
+            await client.PostAsJsonAsync("/auth/register", ValidRegister(email)));
+
+        // Fire two refreshes of the same token at once. The atomic, conditional
+        // revoke must let exactly one rotate; the other is rejected — a token can
+        // never mint two successors (CLAUDE.md §15).
+        var body = new { refreshToken = registered.RefreshToken };
+        var first = client.PostAsJsonAsync("/auth/refresh", body);
+        var second = client.PostAsJsonAsync("/auth/refresh", body);
+        var responses = await Task.WhenAll(first, second);
+
+        responses.Count(r => r.StatusCode == HttpStatusCode.OK).ShouldBe(1);
+        responses.Count(r => r.StatusCode == HttpStatusCode.Unauthorized).ShouldBe(1);
+    }
+
+    [SkippableFact]
     public async Task Me_returns_current_user_with_a_valid_token()
     {
         var client = CreateClient();
