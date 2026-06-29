@@ -37,7 +37,19 @@ try
     builder.Services.AddApiCors(builder.Configuration);
     builder.Services.AddApiRateLimiting();
 
+    // EF Core (Postgres) + ASP.NET Core Identity stores.
+    builder.Services.AddApiPersistence();
+
     var app = builder.Build();
+
+    // Apply migrations on startup in Development only, and only when enabled.
+    // Tests run in Development too, so the flag lets the test host opt out and
+    // avoid reaching for a database (CLAUDE.md §13).
+    if (app.Environment.IsDevelopment() &&
+        app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true))
+    {
+        await app.ApplyMigrationsAsync();
+    }
 
     // Exception handling first so it wraps everything downstream.
     app.UseExceptionHandler();
