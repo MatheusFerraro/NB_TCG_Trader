@@ -1,17 +1,16 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Shouldly;
 
 namespace NbTcgTrader.Tests;
 
-// Separate class => its own WebApplicationFactory => its own DI container and a
-// fresh global rate-limiter bucket, isolated from the other integration tests.
+// Separate class => its own factory => its own DI container and a fresh global
+// rate-limiter bucket, isolated from the other integration tests.
 [Collection(IntegrationTestCollection.Name)]
-public class RateLimitingTests : IClassFixture<WebApplicationFactory<Program>>
+public class RateLimitingTests : IClassFixture<ApiWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly ApiWebApplicationFactory _factory;
 
-    public RateLimitingTests(WebApplicationFactory<Program> factory) =>
+    public RateLimitingTests(ApiWebApplicationFactory factory) =>
         _factory = factory;
 
     [Fact]

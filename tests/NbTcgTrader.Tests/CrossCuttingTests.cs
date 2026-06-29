@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Shouldly;
 
 namespace NbTcgTrader.Tests;
@@ -8,11 +7,11 @@ namespace NbTcgTrader.Tests;
 // Integration tests for the cross-cutting pipeline wired in Program.cs (#3):
 // health endpoint, and the ProblemDetails error contract on a failure path.
 [Collection(IntegrationTestCollection.Name)]
-public class CrossCuttingTests : IClassFixture<WebApplicationFactory<Program>>
+public class CrossCuttingTests : IClassFixture<ApiWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly ApiWebApplicationFactory _factory;
 
-    public CrossCuttingTests(WebApplicationFactory<Program> factory) =>
+    public CrossCuttingTests(ApiWebApplicationFactory factory) =>
         _factory = factory;
 
     [Fact]

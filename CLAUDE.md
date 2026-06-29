@@ -329,15 +329,45 @@ card_name, set, card_number, quantity, condition, price, for_sale
 - Subject line ≤ 72 chars, imperative mood. Add a short body only when context
   helps. Reference the backlog issue, e.g. `Closes #14`.
 - One logical change per commit, mirroring the backlog issues.
+- Send the commits by files. If a feature touches multiple files, commit them together, to clarify: one commit by file or files that matches.
 
 Example:
-
 ```
-feat(import): parse CSV/XLSX uploads into ImportJob and rows
+Files:
 
-Adds CsvHelper/ClosedXML parsing, row validation, and ImportJob
-creation. Oversized files and bad headers are rejected with
-ProblemDetails.
+src/NbTcgTrader.Api/NbTcgTrader.Api.csproj
+src/NbTcgTrader.Api/Common/Domain/ (all files)
 
-Closes #14
+feat(data): add TCG-agnostic domain model and EF/Identity packages
+
+Add Game, CardSet, Card, AppUser (IdentityUser + contact/location
+fields), CollectionItem, ImportJob, ImportRow and their enums per
+CLAUDE.md §7. Reference Npgsql EF Core, EF Core Design tooling, and
+ASP.NET Core Identity EF stores.
+
+Part of #5
+
+-------
+
+Commit 5 — Tests
+
+Files:
+
+tests/NbTcgTrader.Tests/NbTcgTrader.Tests.csproj
+tests/NbTcgTrader.Tests/ApiWebApplicationFactory.cs
+tests/NbTcgTrader.Tests/AppDbContextModelTests.cs
+tests/NbTcgTrader.Tests/DatabaseMigrationTests.cs
+tests/NbTcgTrader.Tests/CrossCuttingTests.cs
+tests/NbTcgTrader.Tests/RateLimitingTests.cs
+
+test(data): cover EF model and migration against Postgres
+
+Add an offline AppDbContext model test (AppUser contact/location fields,
+domain entities, indexes, jsonb, string enums) and a Testcontainers
+Postgres test that applies the migration and asserts tables exist
+(skips cleanly without Docker). Introduce a shared ApiWebApplicationFactory
+so cross-cutting tests boot without a database, and repoint existing
+fixtures to it.
+
+Closes #5
 ```
