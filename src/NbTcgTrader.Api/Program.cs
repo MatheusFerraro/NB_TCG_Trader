@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using NbTcgTrader.Api.Common.Errors;
 using NbTcgTrader.Api.Common.Extensions;
+using NbTcgTrader.Api.Features.Auth;
 using Serilog;
 
 // Bootstrap logger: captures anything that fails before the host is built.
@@ -40,6 +41,9 @@ try
     // EF Core (Postgres) + ASP.NET Core Identity stores.
     builder.Services.AddApiPersistence();
 
+    // JWT bearer auth + Auth-slice services and validators.
+    builder.Services.AddApiAuthentication(builder.Configuration);
+
     var app = builder.Build();
 
     // Apply migrations on startup in Development only, and only when enabled.
@@ -71,9 +75,14 @@ try
     app.UseCors(CorsExtensions.PolicyName);
     app.UseRateLimiter();
 
+    app.UseAuthentication();
+    app.UseAuthorization();
+
     // Liveness probe. Feature slices register their own endpoints under Features/.
     app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
         .WithName("HealthCheck");
+
+    app.MapAuthEndpoints();
 
     app.Run();
 }
