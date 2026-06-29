@@ -26,4 +26,6 @@ public sealed class AppUser : IdentityUser
     public ICollection<CollectionItem> CollectionItems { get; set; } = new List<CollectionItem>();
 
     public ICollection<ImportJob> ImportJobs { get; set; } = new List<ImportJob>();
+
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }
