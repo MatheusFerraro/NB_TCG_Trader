@@ -73,6 +73,7 @@ public static class AuthenticationExtensions
         services.AddScoped<LoginHandler>();
         services.AddScoped<RefreshHandler>();
         services.AddScoped<MeHandler>();
+        services.AddScoped<UpdateProfileHandler>();
 
         // FluentValidation validators for the endpoint filter (CLAUDE.md §10).
         services.AddValidatorsFromAssemblyContaining<RegisterValidator>();

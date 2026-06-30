@@ -198,6 +198,92 @@ public sealed class AuthEndpointsTests : IAsyncLifetime
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
+    [SkippableFact]
+    public async Task UpdateProfile_persists_changes_and_is_reflected_in_me()
+    {
+        var client = CreateClient();
+        var email = UniqueEmail();
+        var auth = await ReadAuthAsync(
+            await client.PostAsJsonAsync("/auth/register", ValidRegister(email)));
+
+        var update = new UpdateProfileDto(
+            DisplayName: "Misty",
+            City: "Ipaussu",
+            Country: "Brazil",
+            ContactEmail: "misty@example.com",
+            DiscordHandle: "misty#0001",
+            InstagramHandle: "misty.w");
+
+        var putRequest = new HttpRequestMessage(HttpMethod.Put, "/auth/me")
+        {
+            Content = JsonContent.Create(update),
+        };
+        putRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
+
+        var putResponse = await client.SendAsync(putRequest);
+        putResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var updated = await putResponse.Content.ReadFromJsonAsync<JsonElement>(Json);
+        updated.GetProperty("displayName").GetString().ShouldBe("Misty");
+        updated.GetProperty("city").GetString().ShouldBe("Ipaussu");
+        updated.GetProperty("country").GetString().ShouldBe("Brazil");
+        updated.GetProperty("contactEmail").GetString().ShouldBe("misty@example.com");
+        updated.GetProperty("discordHandle").GetString().ShouldBe("misty#0001");
+        updated.GetProperty("instagramHandle").GetString().ShouldBe("misty.w");
+
+        // The change must be durable: a fresh /me reads it back.
+        var meRequest = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        meRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
+
+        var me = await client.SendAsync(meRequest);
+        var profile = await me.Content.ReadFromJsonAsync<JsonElement>(Json);
+        profile.GetProperty("displayName").GetString().ShouldBe("Misty");
+        profile.GetProperty("city").GetString().ShouldBe("Ipaussu");
+        profile.GetProperty("country").GetString().ShouldBe("Brazil");
+        profile.GetProperty("contactEmail").GetString().ShouldBe("misty@example.com");
+        profile.GetProperty("discordHandle").GetString().ShouldBe("misty#0001");
+        profile.GetProperty("instagramHandle").GetString().ShouldBe("misty.w");
+    }
+
+    [SkippableFact]
+    public async Task UpdateProfile_with_invalid_input_returns_400_problem_details()
+    {
+        var client = CreateClient();
+        var email = UniqueEmail();
+        var auth = await ReadAuthAsync(
+            await client.PostAsJsonAsync("/auth/register", ValidRegister(email)));
+
+        var update = new UpdateProfileDto(
+            DisplayName: "", // required — rejected
+            City: null,
+            Country: null,
+            ContactEmail: null,
+            DiscordHandle: null,
+            InstagramHandle: null);
+
+        var request = new HttpRequestMessage(HttpMethod.Put, "/auth/me")
+        {
+            Content = JsonContent.Create(update),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
+
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+    }
+
+    [SkippableFact]
+    public async Task UpdateProfile_without_a_token_returns_401()
+    {
+        var client = CreateClient();
+
+        var update = new UpdateProfileDto("Misty", null, null, null, null, null);
+        var response = await client.PutAsJsonAsync("/auth/me", update);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
     // A fresh host per test => a fresh (non-partitioned) auth rate-limit bucket, so
     // one test's requests can't exhaust the 10/min auth limit for another. The host
     // applies migrations on startup, against the already-running shared container.
@@ -236,6 +322,14 @@ public sealed class AuthEndpointsTests : IAsyncLifetime
     private sealed record RegisterRequestDto(
         string Email,
         string Password,
+        string DisplayName,
+        string? City,
+        string? Country,
+        string? ContactEmail,
+        string? DiscordHandle,
+        string? InstagramHandle);
+
+    private sealed record UpdateProfileDto(
         string DisplayName,
         string? City,
         string? Country,

@@ -51,6 +51,17 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .RequireAuthorization();
 
+        group.MapPut("/me",
+                (UpdateProfileRequest request, System.Security.Claims.ClaimsPrincipal user,
+                        UpdateProfileHandler handler) =>
+                    handler.HandleAsync(request, user))
+            .WithName("UpdateProfile")
+            .WithValidation<UpdateProfileRequest>()
+            .Produces<UserResponse>()
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization();
+
         return endpoints;
     }
 }
