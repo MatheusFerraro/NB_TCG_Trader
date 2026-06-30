@@ -74,6 +74,41 @@ public class AuthValidatorTests
             .IsValid.ShouldBeTrue();
     }
 
+    private static UpdateProfileRequest ValidUpdate() => new(
+        DisplayName: "Misty",
+        City: "Cerulean",
+        Country: "Canada",
+        ContactEmail: "contact@example.com",
+        DiscordHandle: "misty#0001",
+        InstagramHandle: "misty.w");
+
+    [Fact]
+    public void UpdateProfile_valid_request_passes()
+    {
+        new UpdateProfileValidator().Validate(ValidUpdate()).IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void UpdateProfile_rejects_empty_display_name()
+    {
+        var result = new UpdateProfileValidator().Validate(ValidUpdate() with { DisplayName = "" });
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(UpdateProfileRequest.DisplayName));
+    }
+
+    [Fact]
+    public void UpdateProfile_rejects_malformed_contact_email_but_allows_empty()
+    {
+        new UpdateProfileValidator()
+            .Validate(ValidUpdate() with { ContactEmail = "nope" })
+            .IsValid.ShouldBeFalse();
+
+        new UpdateProfileValidator()
+            .Validate(ValidUpdate() with { ContactEmail = null })
+            .IsValid.ShouldBeTrue();
+    }
+
     [Fact]
     public void Login_requires_email_and_password()
     {
