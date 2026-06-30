@@ -1,0 +1,202 @@
+using System.Globalization;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+
+namespace NbTcgTrader.Api.Features.Catalog;
+
+/// <summary>
+/// <see cref="ICardCatalogClient"/> backed by pokemontcg.io (CLAUDE.md §8). A typed
+/// <see cref="HttpClient"/> (base address, timeout, and API key are configured by the
+/// DI registration) deserializes the provider's JSON and maps it to the provider-
+/// agnostic result records. Lookups are cached in memory; rate limits and transient
+/// failures are handled by the resilience handler wired in <c>CardCatalogExtensions</c>.
+/// </summary>
+public sealed class PokemonTcgCatalogClient(
+    HttpClient http,
+    IMemoryCache cache,
+    IOptions<CardCatalogOptions> options,
+    ILogger<PokemonTcgCatalogClient> logger) : ICardCatalogClient
+{
+    private static readonly JsonSerializerOptions JsonOptions =
+        new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
+
+    private readonly CardCatalogOptions _options = options.Value;
+
+    public Task<CatalogPage<CatalogCard>> SearchCardsAsync(
+        CatalogSearchQuery query,
+        CancellationToken cancellationToken)
+    {
+        var page = Math.Max(1, query.Page);
+        var pageSize = Math.Clamp(query.PageSize, 1, _options.MaxPageSize);
+        var q = BuildLuceneQuery(query);
+
+        var cacheKey = $"catalog:search:{q}|{page}|{pageSize}";
+
+        return GetOrCreateAsync(cacheKey, async () =>
+        {
+            var url = QueryHelpers.AddQueryString("cards", new Dictionary<string, string?>
+            {
+                ["q"] = q,
+                ["page"] = page.ToString(CultureInfo.InvariantCulture),
+                ["pageSize"] = pageSize.ToString(CultureInfo.InvariantCulture),
+            });
+
+            var envelope = await http.GetFromJsonAsync<CardsEnvelope>(url, JsonOptions, cancellationToken)
+                           ?? new CardsEnvelope(null, page, pageSize, 0);
+
+            var items = (envelope.Data ?? []).Select(MapCard).ToArray();
+            logger.LogDebug(
+                "pokemontcg.io search returned {Count} card(s) (totalCount {TotalCount})",
+                items.Length, envelope.TotalCount);
+
+            return new CatalogPage<CatalogCard>(
+                items,
+                envelope.Page == 0 ? page : envelope.Page,
+                envelope.PageSize == 0 ? pageSize : envelope.PageSize,
+                envelope.TotalCount);
+        });
+    }
+
+    public Task<CatalogCard?> GetCardAsync(string externalId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(externalId);
+
+        return GetOrCreateAsync<CatalogCard?>($"catalog:card:{externalId}", async () =>
+        {
+            // Provider ids are url-safe, but escape defensively rather than concatenating.
+            var url = $"cards/{Uri.EscapeDataString(externalId)}";
+            using var response = await http.GetAsync(url, cancellationToken);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            var envelope = await response.Content
+                .ReadFromJsonAsync<CardEnvelope>(JsonOptions, cancellationToken);
+
+            return envelope?.Data is { } dto ? MapCard(dto) : null;
+        });
+    }
+
+    /// <summary>
+    /// Builds a pokemontcg.io Lucene query from the optional filters. Values are
+    /// quoted so embedded spaces are treated as a phrase; a bare <c>*</c> matches
+    /// everything when no filter is supplied.
+    /// </summary>
+    private static string BuildLuceneQuery(CatalogSearchQuery query)
+    {
+        var clauses = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(query.Name))
+        {
+            clauses.Add($"name:{Quote(query.Name)}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Set))
+        {
+            // The caller may pass a set id (e.g. "base1") or a set name (e.g. "Base").
+            clauses.Add($"(set.id:{Quote(query.Set)} OR set.name:{Quote(query.Set)})");
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Number))
+        {
+            clauses.Add($"number:{Quote(query.Number)}");
+        }
+
+        return clauses.Count == 0 ? "*" : string.Join(' ', clauses);
+    }
+
+    /// <summary>Quotes a Lucene term value, stripping embedded quotes that would break it.</summary>
+    private static string Quote(string value) =>
+        $"\"{value.Trim().Replace("\"", string.Empty)}\"";
+
+    private static CatalogCard MapCard(CardDto dto) => new(
+        dto.Id,
+        dto.Name,
+        dto.Number,
+        dto.Rarity,
+        dto.Images?.Large ?? dto.Images?.Small,
+        BuildMetadata(dto),
+        MapSet(dto.Set));
+
+    private static CatalogSet? MapSet(SetDto? set) => set is null
+        ? null
+        : new CatalogSet(
+            set.Id,
+            set.Name,
+            string.IsNullOrWhiteSpace(set.PtcgoCode) ? set.Id : set.PtcgoCode,
+            ParseReleaseDate(set.ReleaseDate));
+
+    private static DateOnly? ParseReleaseDate(string? value) =>
+        DateOnly.TryParseExact(value, "yyyy/MM/dd", CultureInfo.InvariantCulture,
+            DateTimeStyles.None, out var date)
+            ? date
+            : null;
+
+    /// <summary>
+    /// Captures the variable per-TCG attributes as a small JSON object for the domain
+    /// <c>Card.Metadata</c> (jsonb) column. Returns <c>null</c> when nothing is present.
+    /// </summary>
+    private static string? BuildMetadata(CardDto dto)
+    {
+        var metadata = new Dictionary<string, object>();
+
+        if (!string.IsNullOrWhiteSpace(dto.Supertype))
+        {
+            metadata["supertype"] = dto.Supertype;
+        }
+
+        if (dto.Subtypes is { Count: > 0 })
+        {
+            metadata["subtypes"] = dto.Subtypes;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dto.Hp))
+        {
+            metadata["hp"] = dto.Hp;
+        }
+
+        if (dto.Types is { Count: > 0 })
+        {
+            metadata["types"] = dto.Types;
+        }
+
+        return metadata.Count == 0 ? null : JsonSerializer.Serialize(metadata, JsonOptions);
+    }
+
+    private async Task<T> GetOrCreateAsync<T>(string cacheKey, Func<Task<T>> factory) =>
+        (await cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheMinutes);
+            return await factory();
+        }))!;
+
+    // --- Provider JSON shapes (pokemontcg.io v2). Internal to the mapping above. ---
+
+    private sealed record CardsEnvelope(List<CardDto>? Data, int Page, int PageSize, int TotalCount);
+
+    private sealed record CardEnvelope(CardDto? Data);
+
+    private sealed record CardDto(
+        string Id,
+        string Name,
+        string? Number,
+        string? Rarity,
+        string? Supertype,
+        List<string>? Subtypes,
+        string? Hp,
+        List<string>? Types,
+        SetDto? Set,
+        ImagesDto? Images);
+
+    private sealed record SetDto(string Id, string Name, string? PtcgoCode, string? ReleaseDate);
+
+    private sealed record ImagesDto(string? Small, string? Large);
+}
