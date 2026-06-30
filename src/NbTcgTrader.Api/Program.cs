@@ -44,6 +44,9 @@ try
     // JWT bearer auth + Auth-slice services and validators.
     builder.Services.AddApiAuthentication(builder.Configuration);
 
+    // External card-data client (pokemontcg.io) with caching + resilience (#8).
+    builder.Services.AddApiCardCatalog(builder.Configuration);
+
     var app = builder.Build();
 
     // Apply migrations on startup in Development only, and only when enabled.
