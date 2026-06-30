@@ -24,6 +24,9 @@ public static class CardCatalogExtensions
                 o => Uri.TryCreate(o.BaseUrl, UriKind.Absolute, out _),
                 "CardApi:BaseUrl must be an absolute URL.")
             .Validate(
+                o => o.BaseUrl.EndsWith('/'),
+                "CardApi:BaseUrl must end with a trailing slash ('/').")
+            .Validate(
                 o => o.CacheMinutes > 0,
                 "CardApi:CacheMinutes must be positive.")
             .Validate(
