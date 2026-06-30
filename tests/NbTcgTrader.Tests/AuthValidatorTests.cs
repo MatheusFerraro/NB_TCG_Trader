@@ -103,6 +103,12 @@ public class AuthValidatorTests
         new UpdateProfileValidator()
             .Validate(ValidUpdate() with { ContactEmail = "nope" })
             .IsValid.ShouldBeFalse();
+        
+
+        new UpdateProfileValidator()
+            .Validate(ValidUpdate() with { ContactEmail = ""})
+            .IsValid.ShouldBeTrue();
+
 
         new UpdateProfileValidator()
             .Validate(ValidUpdate() with { ContactEmail = null })

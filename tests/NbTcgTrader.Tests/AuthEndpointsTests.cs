@@ -223,18 +223,26 @@ public sealed class AuthEndpointsTests : IAsyncLifetime
         var putResponse = await client.SendAsync(putRequest);
         putResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var updated = await putResponse.Content.ReadFromJsonAsync<UserDto>(Json);
-        updated.ShouldNotBeNull();
-        updated.DisplayName.ShouldBe("Misty");
+        var updated = await putResponse.Content.ReadFromJsonAsync<JsonElement>(Json);
+        updated.GetProperty("displayName").GetString().ShouldBe("Misty");
+        updated.GetProperty("city").GetString().ShouldBe("Ipaussu");
+        updated.GetProperty("country").GetString().ShouldBe("Brazil");
+        updated.GetProperty("contactEmail").GetString().ShouldBe("misty@example.com");
+        updated.GetProperty("discordHandle").GetString().ShouldBe("misty#0001");
+        updated.GetProperty("instagramHandle").GetString().ShouldBe("misty.w");
 
         // The change must be durable: a fresh /me reads it back.
         var meRequest = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
         meRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
 
         var me = await client.SendAsync(meRequest);
-        var profile = await me.Content.ReadFromJsonAsync<UserDto>(Json);
-        profile.ShouldNotBeNull();
-        profile.DisplayName.ShouldBe("Misty");
+        var profile = await me.Content.ReadFromJsonAsync<JsonElement>(Json);
+        profile.GetProperty("displayName").GetString().ShouldBe("Misty");
+        profile.GetProperty("city").GetString().ShouldBe("Ipaussu");
+        profile.GetProperty("country").GetString().ShouldBe("Brazil");
+        profile.GetProperty("contactEmail").GetString().ShouldBe("misty@example.com");
+        profile.GetProperty("discordHandle").GetString().ShouldBe("misty#0001");
+        profile.GetProperty("instagramHandle").GetString().ShouldBe("misty.w");
     }
 
     [SkippableFact]
