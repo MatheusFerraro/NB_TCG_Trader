@@ -18,12 +18,21 @@ public sealed class BinderValidatorTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Page_below_one_fails(int page)
+    [InlineData(BinderRequestValidator.MaxPage + 1)]
+    public void Out_of_range_page_fails(int page)
     {
         var result = _validator.Validate(new BinderRequest(Page: page));
 
         result.IsValid.ShouldBeFalse();
         result.Errors.ShouldContain(e => e.PropertyName == nameof(BinderRequest.Page));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(BinderRequestValidator.MaxPage)]
+    public void Boundary_pages_pass(int page)
+    {
+        _validator.Validate(new BinderRequest(Page: page)).IsValid.ShouldBeTrue();
     }
 
     [Theory]

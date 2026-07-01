@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NbTcgTrader.Api.Common.Persistence;
 using NbTcgTrader.Api.Features.Catalog;
+using NbTcgTrader.Api.Features.Collection;
 using Shouldly;
 using Testcontainers.PostgreSql;
 
@@ -200,13 +201,14 @@ public sealed class CollectionEndpointsTests : IAsyncLifetime
         var created = await (await SendAddAsync(client, token,
                 new { cardExternalId = "base1-8", quantity = 1, condition = "NM" }))
             .Content.ReadFromJsonAsync<ItemDto>(Json);
+        created.ShouldNotBeNull();
 
         // Items can't be flagged private through the API until #12 ships, so mark
         // one directly in the database.
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var item = await db.CollectionItems.SingleAsync(i => i.Id == created!.Id);
+            var item = await db.CollectionItems.SingleAsync(i => i.Id == created.Id);
             item.IsPrivate = true;
             await db.SaveChangesAsync();
         }
@@ -271,6 +273,20 @@ public sealed class CollectionEndpointsTests : IAsyncLifetime
         var token = await RegisterAsync(client);
 
         var response = await SendGetAsync(client, token, "/collection/me?page=0");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+    }
+
+    [SkippableFact]
+    public async Task Binder_with_too_large_page_returns_400_problem_details()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var token = await RegisterAsync(client);
+
+        var response = await SendGetAsync(client, token,
+            $"/collection/me?page={BinderRequestValidator.MaxPage + 1}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
