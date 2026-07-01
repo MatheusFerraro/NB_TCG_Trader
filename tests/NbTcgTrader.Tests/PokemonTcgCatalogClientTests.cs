@@ -208,4 +208,27 @@ public class PokemonTcgCatalogClientTests
 
         handler.Requests[0].Headers.Contains("X-Api-Key").ShouldBe(expectHeader);
     }
+
+    [Theory]
+    [InlineData("file:///tmp/card-placeholder.svg")]
+    [InlineData("ftp://example.test/card-placeholder.svg")]
+    public void Registration_rejects_non_http_placeholder_urls(string placeholderUrl)
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            ["CardApi:BaseUrl"] = "https://example.test/v2/",
+            ["Catalog:PlaceholderImageUrl"] = placeholderUrl,
+        };
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApiCardCatalog(configuration);
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+
+        Should.Throw<OptionsValidationException>(() =>
+                provider.GetRequiredService<IOptions<CatalogOptions>>().Value)
+            .Message.ShouldContain("Catalog:PlaceholderImageUrl must be an absolute HTTP(S) URL.");
+    }
 }

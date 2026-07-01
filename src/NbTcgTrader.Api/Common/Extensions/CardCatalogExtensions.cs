@@ -37,6 +37,20 @@ public static class CardCatalogExtensions
                 "CardApi:MaxPageSize must be positive.")
             .ValidateOnStart();
 
+        // Catalog presentation options: the placeholder image URL is substituted at the
+        // response layer for cards without an image (#9). It must be an absolute URL and
+        // differs per environment, so it is validated on start like CardApi:BaseUrl.
+        services.AddOptions<CatalogOptions>()
+            .Bind(configuration.GetSection(CatalogOptions.SectionName))
+            .Validate(
+                o => Uri.TryCreate(o.PlaceholderImageUrl, UriKind.Absolute, out var uri)
+                    && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps),
+                "Catalog:PlaceholderImageUrl must be an absolute HTTP(S) URL.")
+            .ValidateOnStart();
+
+        // Catalog slice handlers.
+        services.AddScoped<SearchCardsHandler>();
+
         // Catalog lookups are cached in memory (CLAUDE.md §8). No cache exists yet
         // elsewhere, so register it here; AddMemoryCache is idempotent if reused later.
         services.AddMemoryCache();
