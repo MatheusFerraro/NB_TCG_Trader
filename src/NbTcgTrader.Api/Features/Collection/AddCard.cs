@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using NbTcgTrader.Api.Common.Domain;
 using NbTcgTrader.Api.Common.Persistence;
 using NbTcgTrader.Api.Features.Catalog;
+using Npgsql;
 
 namespace NbTcgTrader.Api.Features.Collection;
 
@@ -116,10 +117,32 @@ public sealed class AddCardHandler(
         {
             game = new Game { Name = GameName, Slug = GameSlug };
             db.Games.Add(game);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            {
+                db.Entry(game).State = EntityState.Detached;
+
+                game = await db.Games
+                    .FirstOrDefaultAsync(g => g.Slug == GameSlug, cancellationToken);
+
+                if (game is null)
+                {
+                    throw;
+                }
+            }
         }
 
         return game;
     }
+
+    private static bool IsUniqueViolation(DbUpdateException exception) =>
+        exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+        };
 
     /// <summary>
     /// Stages the card (and, when present and unseen, its set) for insert. Navigations
