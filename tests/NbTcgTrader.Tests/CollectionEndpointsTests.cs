@@ -155,13 +155,137 @@ public sealed class CollectionEndpointsTests : IAsyncLifetime
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
+    [SkippableFact]
+    public async Task Binder_returns_only_the_callers_items_with_card_display_data()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var owner = await RegisterAsync(client);
+        var other = await RegisterAsync(client);
+
+        (await SendAddAsync(client, owner,
+                new { cardExternalId = "base1-4", quantity = 2, condition = "LP" }))
+            .StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await SendAddAsync(client, other,
+                new { cardExternalId = "base1-8", quantity = 1, condition = "NM" }))
+            .StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        var response = await SendGetAsync(client, owner, "/collection/me");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var page = await response.Content.ReadFromJsonAsync<PageDto>(Json);
+        page.ShouldNotBeNull();
+        page.TotalCount.ShouldBe(1);
+
+        // Grid-ready: the row carries the card display data, no client-side join.
+        var item = page.Items.ShouldHaveSingleItem();
+        item.Quantity.ShouldBe(2);
+        item.Condition.ShouldBe("LP");
+        item.Card.ExternalId.ShouldBe("base1-4");
+        item.Card.Name.ShouldBe("Charizard");
+        item.Card.SetName.ShouldBe("Base");
+        item.Card.ImageUrl.ShouldBe("https://img/charizard-large.png");
+    }
+
+    [SkippableFact]
+    public async Task Binder_includes_private_items_by_default_and_excludes_on_request()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var token = await RegisterAsync(client);
+
+        (await SendAddAsync(client, token,
+                new { cardExternalId = "base1-4", quantity = 1, condition = "NM" }))
+            .StatusCode.ShouldBe(HttpStatusCode.Created);
+        var created = await (await SendAddAsync(client, token,
+                new { cardExternalId = "base1-8", quantity = 1, condition = "NM" }))
+            .Content.ReadFromJsonAsync<ItemDto>(Json);
+
+        // Items can't be flagged private through the API until #12 ships, so mark
+        // one directly in the database.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var item = await db.CollectionItems.SingleAsync(i => i.Id == created!.Id);
+            item.IsPrivate = true;
+            await db.SaveChangesAsync();
+        }
+
+        var all = await (await SendGetAsync(client, token, "/collection/me"))
+            .Content.ReadFromJsonAsync<PageDto>(Json);
+        all!.TotalCount.ShouldBe(2);
+
+        var publicOnly = await (await SendGetAsync(
+                client, token, "/collection/me?includePrivate=false"))
+            .Content.ReadFromJsonAsync<PageDto>(Json);
+        publicOnly!.TotalCount.ShouldBe(1);
+        publicOnly.Items.ShouldHaveSingleItem().Card.ExternalId.ShouldBe("base1-4");
+    }
+
+    [SkippableFact]
+    public async Task Binder_pages_results_deterministically()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var token = await RegisterAsync(client);
+
+        var body = new { cardExternalId = "base1-4", quantity = 1, condition = "NM" };
+        for (var i = 0; i < 3; i++)
+        {
+            (await SendAddAsync(client, token, body))
+                .StatusCode.ShouldBe(HttpStatusCode.Created);
+        }
+
+        var first = await (await SendGetAsync(
+                client, token, "/collection/me?page=1&pageSize=2"))
+            .Content.ReadFromJsonAsync<PageDto>(Json);
+        first!.TotalCount.ShouldBe(3);
+        first.Items.Count.ShouldBe(2);
+
+        var second = await (await SendGetAsync(
+                client, token, "/collection/me?page=2&pageSize=2"))
+            .Content.ReadFromJsonAsync<PageDto>(Json);
+        second!.TotalCount.ShouldBe(3);
+        var lastItem = second.Items.ShouldHaveSingleItem();
+
+        // No row is repeated or dropped across pages.
+        first.Items.Select(i => i.Id).ShouldNotContain(lastItem.Id);
+    }
+
+    [SkippableFact]
+    public async Task Binder_without_a_token_returns_401()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/collection/me");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [SkippableFact]
+    public async Task Binder_with_invalid_page_returns_400_problem_details()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var token = await RegisterAsync(client);
+
+        var response = await SendGetAsync(client, token, "/collection/me?page=0");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+    }
+
     private static FakeCardCatalogClient KnownCatalog()
     {
+        var baseSet = new CatalogSet("base1", "Base", "BS", new DateOnly(1999, 1, 9));
         var catalog = new FakeCardCatalogClient();
         catalog.Cards["base1-4"] = new CatalogCard(
             "base1-4", "Charizard", "4", "Rare Holo",
-            "https://img/charizard-large.png", null,
-            new CatalogSet("base1", "Base", "BS", new DateOnly(1999, 1, 9)));
+            "https://img/charizard-large.png", null, baseSet);
+        catalog.Cards["base1-8"] = new CatalogCard(
+            "base1-8", "Machamp", "8", "Rare Holo",
+            "https://img/machamp-large.png", null, baseSet);
         return catalog;
     }
 
@@ -201,8 +325,19 @@ public sealed class CollectionEndpointsTests : IAsyncLifetime
         return client.SendAsync(request);
     }
 
+    private static Task<HttpResponseMessage> SendGetAsync(
+        HttpClient client, string token, string url)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client.SendAsync(request);
+    }
+
     // Local DTOs assert the over-the-wire JSON contract (enums as strings),
     // independent of the API's internal record shapes.
+    private sealed record PageDto(
+        IReadOnlyList<ItemDto> Items, int Page, int PageSize, int TotalCount);
+
     private sealed record ItemDto(
         int Id, ItemCardDto Card, int Quantity, string Condition, bool IsForSale,
         decimal? Price, string Currency, bool IsPrivate, string? Notes);
