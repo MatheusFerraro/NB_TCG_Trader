@@ -25,5 +25,11 @@ public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:SigningKey", TestJwt.SigningKey);
         builder.UseSetting("Jwt:Issuer", TestJwt.Issuer);
         builder.UseSetting("Jwt:Audience", TestJwt.Audience);
+
+        // Catalog wiring validates the placeholder URL on startup (ValidateOnStart), so
+        // the host needs a valid absolute URL to boot — even for tests that never hit the
+        // catalog endpoint. A throwaway value is fine here.
+        builder.UseSetting(
+            "Catalog:PlaceholderImageUrl", "https://localhost/assets/card-placeholder.svg");
     }
 }
