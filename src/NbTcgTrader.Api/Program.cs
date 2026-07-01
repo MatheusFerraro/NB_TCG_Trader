@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 using NbTcgTrader.Api.Common.Errors;
 using NbTcgTrader.Api.Common.Extensions;
 using NbTcgTrader.Api.Features.Auth;
 using NbTcgTrader.Api.Features.Catalog;
+using NbTcgTrader.Api.Features.Collection;
 using Serilog;
 
 // Bootstrap logger: captures anything that fails before the host is built.
@@ -21,6 +23,11 @@ try
         .Enrich.FromLogContext());
 
     builder.Services.AddApiOpenApi();
+
+    // Domain enums (Condition, Currency, ...) cross the wire as strings ("NM",
+    // "CAD"), not opaque ints — for requests and responses alike.
+    builder.Services.ConfigureHttpJsonOptions(options =>
+        options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
     // Uniform error contract: ProblemDetails for every failure, with a traceId
     // for correlation. The handler keeps exception detail out of responses.
@@ -47,6 +54,9 @@ try
 
     // External card-data client (pokemontcg.io) with caching + resilience (#8).
     builder.Services.AddApiCardCatalog(builder.Configuration);
+
+    // Collection/binder slice handlers (#10).
+    builder.Services.AddApiCollection();
 
     var app = builder.Build();
 
@@ -93,6 +103,7 @@ try
 
     app.MapAuthEndpoints();
     app.MapCatalogEndpoints();
+    app.MapCollectionEndpoints();
 
     app.Run();
 }
