@@ -2,6 +2,7 @@ using System.Diagnostics;
 using NbTcgTrader.Api.Common.Errors;
 using NbTcgTrader.Api.Common.Extensions;
 using NbTcgTrader.Api.Features.Auth;
+using NbTcgTrader.Api.Features.Catalog;
 using Serilog;
 
 // Bootstrap logger: captures anything that fails before the host is built.
@@ -75,6 +76,11 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    // Serve static assets (e.g. the catalog placeholder image at
+    // /assets/card-placeholder.svg, #9) from wwwroot. Public and before auth.
+    app.UseStaticFiles();
+
     app.UseCors(CorsExtensions.PolicyName);
     app.UseRateLimiter();
 
@@ -86,6 +92,7 @@ try
         .WithName("HealthCheck");
 
     app.MapAuthEndpoints();
+    app.MapCatalogEndpoints();
 
     app.Run();
 }
