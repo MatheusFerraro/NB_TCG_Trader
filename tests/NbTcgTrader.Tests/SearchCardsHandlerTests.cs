@@ -69,7 +69,7 @@ public class SearchCardsHandlerTests
         var catalog = new FakeCardCatalogClient
         {
             NextPage = new CatalogPage<CatalogCard>(
-                new[] { new CatalogCard("base1-5", "Machamp", "8", "Rare Holo",
+                new[] { new CatalogCard("base1-8", "Machamp", "8", "Rare Holo",
                     ImageUrl: null, Metadata: null, Set: null) },
                 Page: 1, PageSize: 25, TotalCount: 1),
         };

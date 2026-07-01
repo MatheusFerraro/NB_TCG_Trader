@@ -43,8 +43,9 @@ public static class CardCatalogExtensions
         services.AddOptions<CatalogOptions>()
             .Bind(configuration.GetSection(CatalogOptions.SectionName))
             .Validate(
-                o => Uri.TryCreate(o.PlaceholderImageUrl, UriKind.Absolute, out _),
-                "Catalog:PlaceholderImageUrl must be an absolute URL.")
+                o => Uri.TryCreate(o.PlaceholderImageUrl, UriKind.Absolute, out var uri)
+                    && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps),
+                "Catalog:PlaceholderImageUrl must be an absolute HTTP(S) URL.")
             .ValidateOnStart();
 
         // Catalog slice handlers.
