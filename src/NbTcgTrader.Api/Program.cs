@@ -5,6 +5,7 @@ using NbTcgTrader.Api.Common.Extensions;
 using NbTcgTrader.Api.Features.Auth;
 using NbTcgTrader.Api.Features.Catalog;
 using NbTcgTrader.Api.Features.Collection;
+using NbTcgTrader.Api.Features.Import;
 using Serilog;
 
 // Bootstrap logger: captures anything that fails before the host is built.
@@ -104,6 +105,7 @@ try
     app.MapAuthEndpoints();
     app.MapCatalogEndpoints();
     app.MapCollectionEndpoints();
+    app.MapImportEndpoints();
 
     app.Run();
 }
