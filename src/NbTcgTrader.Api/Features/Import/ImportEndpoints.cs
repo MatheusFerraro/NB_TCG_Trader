@@ -1,7 +1,7 @@
 namespace NbTcgTrader.Api.Features.Import;
 
 /// <summary>
-/// Maps the Import slice endpoints (CLAUDE.md §6/§9, BACKLOG #13). Import is
+/// Maps the Import slice endpoints (AGENTS.md §6/§9, BACKLOG #13). Import is
 /// owner-scoped, so the group requires authorization by default; the template
 /// download opts out because it is public, static content with no user data.
 /// The strict import rate-limit policy is reserved for the expensive upload
@@ -18,7 +18,7 @@ public static class ImportEndpoints
 
         group.MapGet("/template",
                 () => Results.File(
-                    ImportTemplate.CsvBytes,
+                    ImportTemplate.GetCsvBytes(),
                     ImportTemplate.ContentType,
                     ImportTemplate.FileName))
             .AllowAnonymous()

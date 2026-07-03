@@ -3,7 +3,7 @@ using System.Text;
 namespace NbTcgTrader.Api.Features.Import;
 
 /// <summary>
-/// The CSV import contract (CLAUDE.md §9, BACKLOG #13): the template users download,
+/// The CSV import contract (AGENTS.md §9, BACKLOG #13): the template users download,
 /// fill in, and upload. The column names live here so the upload parser (#14) matches
 /// against the same constants the template serves — the two can never drift apart.
 /// Only <c>card_name</c> is required; everything else is best-effort matching input.
@@ -38,10 +38,13 @@ public static class ImportTemplate
     /// <summary>
     /// The template body: the header row only, CRLF-terminated per RFC 4180. No cell
     /// starts with <c>=</c> <c>+</c> <c>-</c> <c>@</c>, so no CSV-injection escaping
-    /// is needed here (CLAUDE.md §15); any future export of user data must escape.
+    /// is needed here (AGENTS.md §15); any future export of user data must escape.
     /// </summary>
     public static string Csv { get; } = string.Join(',', Header) + "\r\n";
 
     /// <summary>UTF-8 bytes served by the endpoint, encoded once.</summary>
-    public static byte[] CsvBytes { get; } = Encoding.UTF8.GetBytes(Csv);
+    private static readonly byte[] CsvBytes = Encoding.UTF8.GetBytes(Csv);
+
+    /// <summary>Returns a fresh byte array so callers cannot mutate the cached template.</summary>
+    public static byte[] GetCsvBytes() => [.. CsvBytes];
 }

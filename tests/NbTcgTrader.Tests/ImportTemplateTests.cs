@@ -7,7 +7,7 @@ namespace NbTcgTrader.Tests;
 // Coverage for the downloadable CSV import template (BACKLOG #13). The endpoint
 // serves static content and never touches the database, so it runs on the shared
 // no-database host. Asserts the over-the-wire contract: anonymous access, a CSV
-// attachment, and exactly the CLAUDE.md §9 header row.
+// attachment, and exactly the AGENTS.md §9 header row.
 [Collection(IntegrationTestCollection.Name)]
 public sealed class ImportTemplateTests : IClassFixture<ApiWebApplicationFactory>
 {
@@ -46,7 +46,7 @@ public sealed class ImportTemplateTests : IClassFixture<ApiWebApplicationFactory
     [Fact]
     public void Template_cells_need_no_csv_injection_escaping()
     {
-        // Guards the CLAUDE.md §15 rule at the contract level: if a column is ever
+        // Guards the AGENTS.md §15 rule at the contract level: if a column is ever
         // renamed to start with = + - @, this fails before a spreadsheet can run it.
         foreach (var column in ImportTemplate.Header)
         {
