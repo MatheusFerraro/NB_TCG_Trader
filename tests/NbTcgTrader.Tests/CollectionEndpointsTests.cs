@@ -16,12 +16,12 @@ using Testcontainers.PostgreSql;
 
 namespace NbTcgTrader.Tests;
 
-// End-to-end coverage of POST /collection/items (BACKLOG #10) against a real Postgres
-// via Testcontainers, with the provider client swapped for a fake so no network is
-// touched. Covers the AC: authorized (401 without a token), persists (row + catalog
-// card land in the database), rejects unknown card (404), returns the created item
-// (201 + DTO). Skips cleanly when Docker is unavailable. Each test gets its own host
-// (own rate-limit bucket) and user.
+// End-to-end coverage of the /collection endpoints (BACKLOG #10/#11/#12) against a
+// real Postgres via Testcontainers, with the provider client swapped for a fake so no
+// network is touched. Covers the ACs: authorized (401 without a token), owner-only
+// (someone else's item id behaves like a missing one), persists, validates, and maps
+// failures to ProblemDetails. Skips cleanly when Docker is unavailable. Each test gets
+// its own host (own rate-limit bucket) and user.
 [Collection(IntegrationTestCollection.Name)]
 public sealed class CollectionEndpointsTests : IAsyncLifetime
 {
@@ -203,15 +203,15 @@ public sealed class CollectionEndpointsTests : IAsyncLifetime
             .Content.ReadFromJsonAsync<ItemDto>(Json);
         created.ShouldNotBeNull();
 
-        // Items can't be flagged private through the API until #12 ships, so mark
-        // one directly in the database.
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var item = await db.CollectionItems.SingleAsync(i => i.Id == created.Id);
-            item.IsPrivate = true;
-            await db.SaveChangesAsync();
-        }
+        (await SendPutAsync(client, token, created.Id, new
+            {
+                quantity = 1,
+                condition = "NM",
+                isForSale = false,
+                currency = "CAD",
+                isPrivate = true,
+            }))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var all = await (await SendGetAsync(client, token, "/collection/me"))
             .Content.ReadFromJsonAsync<PageDto>(Json);
@@ -252,6 +252,186 @@ public sealed class CollectionEndpointsTests : IAsyncLifetime
 
         // No row is repeated or dropped across pages.
         first.Items.Select(i => i.Id).ShouldNotContain(lastItem.Id);
+    }
+
+    [SkippableFact]
+    public async Task Update_item_persists_changes_and_returns_the_updated_dto()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var token = await RegisterAsync(client);
+
+        var created = await (await SendAddAsync(client, token,
+                new { cardExternalId = "base1-4", quantity = 1, condition = "NM" }))
+            .Content.ReadFromJsonAsync<ItemDto>(Json);
+        created.ShouldNotBeNull();
+
+        var response = await SendPutAsync(client, token, created.Id, new
+        {
+            quantity = 3,
+            condition = "MP",
+            isForSale = true,
+            price = 49.99,
+            currency = "BRL",
+            isPrivate = false,
+            notes = "Shadowless",
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var updated = await response.Content.ReadFromJsonAsync<ItemDto>(Json);
+        updated.ShouldNotBeNull();
+        updated.Id.ShouldBe(created.Id);
+        updated.Quantity.ShouldBe(3);
+        updated.Condition.ShouldBe("MP");
+        updated.IsForSale.ShouldBeTrue();
+        updated.Price.ShouldBe(49.99m);
+        updated.Currency.ShouldBe("BRL");
+        updated.Notes.ShouldBe("Shadowless");
+        // The card the row points at never changes on update.
+        updated.Card.ExternalId.ShouldBe("base1-4");
+
+        // Durability: the changes are in the database.
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var saved = await db.CollectionItems.SingleAsync(i => i.Id == created.Id);
+        saved.Quantity.ShouldBe(3);
+        saved.IsForSale.ShouldBeTrue();
+        saved.Price.ShouldBe(49.99m);
+        saved.UpdatedAt.ShouldBeGreaterThan(saved.CreatedAt);
+    }
+
+    [SkippableFact]
+    public async Task Update_for_sale_without_price_returns_400_problem_details()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var token = await RegisterAsync(client);
+
+        var created = await (await SendAddAsync(client, token,
+                new { cardExternalId = "base1-4", quantity = 1, condition = "NM" }))
+            .Content.ReadFromJsonAsync<ItemDto>(Json);
+        created.ShouldNotBeNull();
+
+        var response = await SendPutAsync(client, token, created.Id, new
+        {
+            quantity = 1,
+            condition = "NM",
+            isForSale = true,
+            currency = "CAD",
+            isPrivate = false,
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+    }
+
+    [SkippableFact]
+    public async Task Update_someone_elses_item_returns_404_and_changes_nothing()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var owner = await RegisterAsync(client);
+        var intruder = await RegisterAsync(client);
+
+        var created = await (await SendAddAsync(client, owner,
+                new { cardExternalId = "base1-4", quantity = 2, condition = "LP" }))
+            .Content.ReadFromJsonAsync<ItemDto>(Json);
+        created.ShouldNotBeNull();
+
+        var response = await SendPutAsync(client, intruder, created.Id, new
+        {
+            quantity = 1,
+            condition = "NM",
+            isForSale = false,
+            currency = "CAD",
+            isPrivate = false,
+        });
+
+        // Owner-only: someone else's item is indistinguishable from a missing one.
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var saved = await db.CollectionItems.SingleAsync(i => i.Id == created.Id);
+        saved.Quantity.ShouldBe(2);
+    }
+
+    [SkippableFact]
+    public async Task Update_without_a_token_returns_401()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync("/collection/items/1", new
+        {
+            quantity = 1,
+            condition = "NM",
+            isForSale = false,
+            currency = "CAD",
+            isPrivate = false,
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [SkippableFact]
+    public async Task Delete_item_returns_204_and_removes_the_row()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var token = await RegisterAsync(client);
+
+        var created = await (await SendAddAsync(client, token,
+                new { cardExternalId = "base1-4", quantity = 1, condition = "NM" }))
+            .Content.ReadFromJsonAsync<ItemDto>(Json);
+        created.ShouldNotBeNull();
+
+        var response = await SendDeleteAsync(client, token, created.Id);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.CollectionItems.AnyAsync(i => i.Id == created.Id)).ShouldBeFalse();
+
+        // Deleting the same item again is a 404, not a silent no-op.
+        (await SendDeleteAsync(client, token, created.Id))
+            .StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [SkippableFact]
+    public async Task Delete_someone_elses_item_returns_404_and_keeps_the_row()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var owner = await RegisterAsync(client);
+        var intruder = await RegisterAsync(client);
+
+        var created = await (await SendAddAsync(client, owner,
+                new { cardExternalId = "base1-4", quantity = 1, condition = "NM" }))
+            .Content.ReadFromJsonAsync<ItemDto>(Json);
+        created.ShouldNotBeNull();
+
+        var response = await SendDeleteAsync(client, intruder, created.Id);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        (await db.CollectionItems.AnyAsync(i => i.Id == created.Id)).ShouldBeTrue();
+    }
+
+    [SkippableFact]
+    public async Task Delete_without_a_token_returns_401()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+
+        var response = await client.DeleteAsync("/collection/items/1");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [SkippableFact]
@@ -345,6 +525,25 @@ public sealed class CollectionEndpointsTests : IAsyncLifetime
         HttpClient client, string token, string url)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client.SendAsync(request);
+    }
+
+    private static Task<HttpResponseMessage> SendPutAsync(
+        HttpClient client, string token, int id, object body)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/collection/items/{id}")
+        {
+            Content = JsonContent.Create(body),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client.SendAsync(request);
+    }
+
+    private static Task<HttpResponseMessage> SendDeleteAsync(
+        HttpClient client, string token, int id)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/collection/items/{id}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client.SendAsync(request);
     }
