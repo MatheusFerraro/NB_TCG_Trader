@@ -20,7 +20,11 @@ public sealed class ResolveImportRowValidator : AbstractValidator<ResolveImportR
     public ResolveImportRowValidator()
     {
         // Max length matches the Card.ExternalId column, same as AddCard.
-        RuleFor(x => x.CardExternalId).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.CardExternalId)
+            .NotEmpty()
+            .Must(value => !string.IsNullOrWhiteSpace(value))
+            .WithMessage("'Card External Id' must not be empty.")
+            .MaximumLength(100);
     }
 }
 
@@ -29,7 +33,7 @@ public sealed class ResolveImportRowValidator : AbstractValidator<ResolveImportR
 /// <see cref="CollectionItem"/> from the row's parsed values, marks the row
 /// <see cref="MatchStatus.ManuallyMatched"/>, and recomputes the job — completing it once
 /// nothing is left unmatched (#16 AC). Ownership is enforced on the job's user id, so
-/// another user's job/row is an indistinguishable 404 (CLAUDE.md §15). A row that is not
+/// another user's job/row is an indistinguishable 404 (AGENTS.md §15). A row that is not
 /// currently Unmatched (already resolved, skipped, or auto-matched) is a 409 Conflict.
 /// An <c>externalId</c> the provider does not know is a 404 — the same contract as
 /// add-to-binder — and the chosen card is staged locally through the shared
