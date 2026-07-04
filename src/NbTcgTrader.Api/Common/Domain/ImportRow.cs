@@ -24,6 +24,12 @@ public sealed class ImportRow
 
     public CardCondition? Condition { get; set; }
 
+    /// <summary>
+    /// The template's <c>for_sale</c> column. Kept on the row so reconciliation (#16)
+    /// can create the CollectionItem as a listing without re-reading the file.
+    /// </summary>
+    public bool IsForSale { get; set; }
+
     public MatchStatus MatchStatus { get; set; }
 
     public int? MatchedCardId { get; set; }
