@@ -107,7 +107,7 @@ public sealed class UploadImportHandler(
             // ClosedXML needs a seekable stream; the size cap makes buffering safe.
             if (extension == ".xlsx")
             {
-                using var buffer = new MemoryStream((int)file.Length);
+                using var buffer = new MemoryStream();
                 await stream.CopyToAsync(buffer, cancellationToken);
                 buffer.Position = 0;
                 parsed = ImportFileParser.ParseXlsx(buffer, limits.MaxRows);

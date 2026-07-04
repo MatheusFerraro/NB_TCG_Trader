@@ -74,7 +74,7 @@ public static class ImportFileParser
 
         try
         {
-            using var reader = new StreamReader(stream);
+            using var reader = new StreamReader(stream, leaveOpen: true);
             using var csv = new CsvReader(reader, configuration);
 
             if (!csv.Read() || !csv.ReadHeader() || csv.HeaderRecord is not { Length: > 0 })

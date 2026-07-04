@@ -145,6 +145,20 @@ public sealed class ImportFileParserTests
         result.FileErrors.ShouldContain(e => e.Contains("no data rows"));
     }
 
+    [Fact]
+    public void Csv_parser_leaves_the_caller_stream_open()
+    {
+        using var stream = Csv("card_name", "Charizard");
+
+        var result = ImportFileParser.ParseCsv(stream, MaxRows);
+
+        result.HasErrors.ShouldBeFalse();
+        stream.CanRead.ShouldBeTrue();
+        stream.Position = 0;
+        using var reader = new StreamReader(stream, leaveOpen: true);
+        reader.ReadLine().ShouldBe("card_name");
+    }
+
     [Theory]
     [InlineData("Charizard,0,,,", "quantity")]
     [InlineData("Charizard,1000,,,", "quantity")]
