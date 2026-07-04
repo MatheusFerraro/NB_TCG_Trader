@@ -151,6 +151,15 @@ public sealed class UploadImportHandler(
         // catalog cards are staged in the same unit of work and saved with the job.
         await matcher.MatchAsync(job, cancellationToken);
 
+        // Each auto-matched row becomes a binder item immediately (#16): a matched row —
+        // automatic or hand-picked — always materializes, and the same shared rule is used
+        // by manual resolution. Unmatched rows create nothing until the user resolves them.
+        foreach (var row in job.Rows.Where(r => r.MatchStatus == MatchStatus.AutoMatched))
+        {
+            db.CollectionItems.Add(ImportReconciliation.ToBinderItem(
+                row, row.MatchedCard!, userId, job.CreatedAt));
+        }
+
         db.ImportJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
 
