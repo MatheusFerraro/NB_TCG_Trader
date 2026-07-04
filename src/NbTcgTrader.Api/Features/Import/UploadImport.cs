@@ -43,14 +43,17 @@ public sealed record ImportJobResponse(
 
 /// <summary>
 /// Accepts a template upload, guards it (extension + content-type allowlist, size cap,
-/// row cap — §15), parses it with <see cref="ImportFileParser"/>, and persists the
-/// <see cref="ImportJob"/> with its rows. Any file or row error rejects the whole
-/// upload as a 400 ValidationProblem, so a job only ever exists fully parsed. The job
-/// lands <see cref="ImportStatus.Pending"/> with every row Unmatched — catalog
-/// matching is the next step (#15).
+/// row cap — §15), parses it with <see cref="ImportFileParser"/>, auto-matches the rows
+/// against the catalog with <see cref="ImportRowMatcher"/> (#15 — synchronous, per the
+/// AGENTS.md §9 MVP stance), and persists the <see cref="ImportJob"/> with its rows.
+/// Any file or row error rejects the whole upload as a 400 ValidationProblem, so a job
+/// only ever exists fully parsed. The persisted job is therefore always
+/// <see cref="ImportStatus.Completed"/> (everything matched) or
+/// <see cref="ImportStatus.NeedsReview"/> (something needs the user, #16).
 /// </summary>
 public sealed class UploadImportHandler(
     AppDbContext db,
+    ImportRowMatcher matcher,
     IOptions<ImportOptions> options,
     ILogger<UploadImportHandler> logger)
 {
@@ -138,21 +141,24 @@ public sealed class UploadImportHandler(
         {
             UserId = userId,
             FileName = fileName,
-            Status = ImportStatus.Pending,
+            Status = ImportStatus.Processing,
             RowsTotal = parsed.Rows.Count,
-            RowsMatched = 0,
-            RowsUnmatched = parsed.Rows.Count,
             CreatedAt = DateTimeOffset.UtcNow,
             Rows = parsed.Rows,
         };
+
+        // Sets each row's MatchStatus and the job's counts + final status; matched
+        // catalog cards are staged in the same unit of work and saved with the job.
+        await matcher.MatchAsync(job, cancellationToken);
 
         db.ImportJobs.Add(job);
         await db.SaveChangesAsync(cancellationToken);
 
         // Counts only — never the parsed card list (§10).
         logger.LogInformation(
-            "User {UserId} uploaded import job {ImportJobId} with {RowsTotal} rows",
-            userId, job.Id, job.RowsTotal);
+            "User {UserId} uploaded import job {ImportJobId}: {RowsTotal} rows, " +
+            "{RowsMatched} matched, {RowsUnmatched} for review",
+            userId, job.Id, job.RowsTotal, job.RowsMatched, job.RowsUnmatched);
 
         return Results.Created($"/import/jobs/{job.Id}", ImportJobResponse.From(job));
     }

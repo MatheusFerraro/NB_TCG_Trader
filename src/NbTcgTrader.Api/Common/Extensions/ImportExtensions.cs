@@ -29,6 +29,7 @@ public static class ImportExtensions
         services.Configure<FormOptions>(o =>
             o.MultipartBodyLengthLimit = maxFileBytes + 64 * 1024);
 
+        services.AddScoped<ImportRowMatcher>();
         services.AddScoped<UploadImportHandler>();
         return services;
     }
