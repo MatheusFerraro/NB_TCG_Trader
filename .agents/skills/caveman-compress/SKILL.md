@@ -3,8 +3,7 @@ name: caveman-compress
 description: >
   Compress natural language memory files (CLAUDE.md, todos, preferences) into caveman format
   to save input tokens. Preserves all technical substance, code, URLs, and structure.
-  Compressed version overwrites the original file. Human-readable backup saved under
-  the platform user-data backup directory.
+  Compressed version overwrites the original file. Human-readable backup saved as FILE.original.md.
   Trigger: /caveman-compress FILEPATH or "compress memory file"
 ---
 
@@ -12,10 +11,7 @@ description: >
 
 ## Purpose
 
-Compress natural language files (CLAUDE.md, todos, preferences) into caveman-speak to reduce input tokens. Compressed version overwrites original. Human-readable backup saved under the platform user-data backup directory:
-
-- Windows: `%LOCALAPPDATA%\caveman-compress\backups\<source-folder>\`
-- Linux/macOS: `$XDG_DATA_HOME/caveman-compress/backups/<source-folder>/` or `~/.local/share/caveman-compress/backups/<source-folder>/`
+Compress natural language files (CLAUDE.md, todos, preferences) into caveman-speak to reduce input tokens. Compressed version overwrites original. Human-readable backup saved as `<filename>.original.md`.
 
 ## Trigger
 
@@ -111,5 +107,5 @@ Compressed:
 - NEVER modify: .py, .js, .ts, .json, .yaml, .yml, .toml, .env, .lock, .css, .html, .xml, .sql, .sh
 - If file has mixed content (prose + code), compress ONLY the prose sections
 - If unsure whether something is code or prose, leave it unchanged
-- Original file is backed up as `<stem>.original.md` under the platform user-data backup directory before overwriting
-- Never compress `*.original.md` backup files (skip them)
+- Original file is backed up as FILE.original.md before overwriting
+- Never compress FILE.original.md (skip it)
