@@ -22,10 +22,14 @@ Claude read `CLAUDE.md` on every session start. If file big, cost big. Caveman m
 
 ```
 CLAUDE.md          ← compressed (Claude reads this — fewer tokens every session)
-CLAUDE.original.md ← human-readable backup (you edit this)
+user-data backups  ← human-readable backup (you edit this)
 ```
 
-Original never lost. You can read and edit `.original.md`. Run skill again to re-compress after edits.
+Original never lost. Backups live outside the project so agent loaders do not re-read them:
+Windows `%LOCALAPPDATA%\caveman-compress\backups\<source-folder>\`; Linux/macOS
+`$XDG_DATA_HOME/caveman-compress/backups/<source-folder>/` or
+`~/.local/share/caveman-compress/backups/<source-folder>/`. Run skill again to
+re-compress after edits.
 
 ## Benchmarks
 
@@ -121,7 +125,7 @@ if errors: Claude fixes cherry-picked issues only   (tokens — targeted fix)
 retry up to 2 times
         ↓
 write compressed → CLAUDE.md
-write original   → CLAUDE.original.md
+write original   → user-data backup dir / CLAUDE.original.md
 ```
 
 Only two things use tokens: initial compression + targeted fix if validation fails. Everything else is local Python.

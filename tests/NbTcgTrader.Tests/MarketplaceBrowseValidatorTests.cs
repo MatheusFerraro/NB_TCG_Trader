@@ -96,8 +96,25 @@ public sealed class MarketplaceBrowseValidatorTests
     [Fact]
     public void Equal_min_and_max_price_pass()
     {
-        _validator.Validate(new BrowseListingsRequest(MinPrice: 25m, MaxPrice: 25m))
+        _validator.Validate(new BrowseListingsRequest(
+                MinPrice: 25m,
+                MaxPrice: 25m,
+                Currency: Currency.CAD))
             .IsValid.ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public void Price_filter_without_currency_fails(bool hasMinPrice, bool hasMaxPrice)
+    {
+        var result = _validator.Validate(new BrowseListingsRequest(
+            MinPrice: hasMinPrice ? 10m : null,
+            MaxPrice: hasMaxPrice ? 50m : null));
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(BrowseListingsRequest.Currency));
     }
 
     [Fact]

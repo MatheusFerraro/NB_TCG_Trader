@@ -12,7 +12,7 @@ Six intensity levels:
 |-------|-------------|
 | `lite` | Drop filler/hedging. Sentences stay full. Professional but tight. |
 | `full` | Default. Drop articles, fragments OK, short synonyms. |
-| `ultra` | Bare fragments. Abbreviations (DB, auth, fn). Arrows for causality. |
+| `ultra` | Bare fragments. No prose abbreviations or arrows; keep symbols/API names exact. |
 | `wenyan-lite` | Classical Chinese register, light compression. |
 | `wenyan-full` | Maximum 文言文. 80-90% character reduction. |
 | `wenyan-ultra` | Extreme classical compression. |
@@ -40,7 +40,7 @@ Caveman (full):
 > New object ref each render. Inline object prop = new ref = re-render. Wrap in `useMemo`.
 
 Caveman (ultra):
-> Inline obj prop → new ref → re-render. `useMemo`.
+> Inline object prop, new ref, re-render. `useMemo`.
 
 ## See also
 

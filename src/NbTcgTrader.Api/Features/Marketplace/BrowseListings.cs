@@ -50,6 +50,11 @@ public sealed class BrowseListingsRequestValidator : AbstractValidator<BrowseLis
             .GreaterThanOrEqualTo(x => x.MinPrice!.Value)
             .When(x => x.MinPrice.HasValue && x.MaxPrice.HasValue)
             .WithMessage("'Max Price' must be greater than or equal to 'Min Price'.");
+
+        RuleFor(x => x.Currency)
+            .NotNull()
+            .When(x => x.MinPrice.HasValue || x.MaxPrice.HasValue)
+            .WithMessage("'Currency' is required when filtering by price.");
     }
 }
 
@@ -74,8 +79,8 @@ public sealed class BrowseListingsHandler(
 
         if (!string.IsNullOrWhiteSpace(request.Game))
         {
-            var game = request.Game.Trim();
-            query = query.Where(i => i.Card!.Game!.Slug.ToLower() == game.ToLower());
+            var game = request.Game.Trim().ToLowerInvariant();
+            query = query.Where(i => i.Card!.Game!.Slug == game);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Set))
