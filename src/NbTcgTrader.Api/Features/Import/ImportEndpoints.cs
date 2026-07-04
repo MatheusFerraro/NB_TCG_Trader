@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using NbTcgTrader.Api.Common.Extensions;
+using NbTcgTrader.Api.Common.Filters;
 
 namespace NbTcgTrader.Api.Features.Import;
 
@@ -39,6 +40,37 @@ public static class ImportEndpoints
             .Accepts<IFormFile>("multipart/form-data")
             .Produces<ImportJobResponse>(StatusCodes.Status201Created)
             .ProducesValidationProblem();
+
+        // Reconciliation (#16): list the rows a job still needs a decision on, then
+        // resolve each (pick a catalog card) or skip it. All owner-scoped; a job/row that
+        // is not the caller's is an indistinguishable 404.
+        group.MapGet("/jobs/{jobId:int}/rows",
+                (int jobId, ClaimsPrincipal principal,
+                        ListImportRowsHandler handler, CancellationToken ct) =>
+                    handler.HandleAsync(jobId, principal, ct))
+            .WithName("ListImportRows")
+            .Produces<UnmatchedRowsResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/jobs/{jobId:int}/rows/{rowId:int}/resolve",
+                (int jobId, int rowId, ResolveImportRowRequest request,
+                        ClaimsPrincipal principal,
+                        ResolveImportRowHandler handler, CancellationToken ct) =>
+                    handler.HandleAsync(jobId, rowId, request, principal, ct))
+            .WithName("ResolveImportRow")
+            .WithValidation<ResolveImportRowRequest>()
+            .Produces<ResolveImportRowResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapPost("/jobs/{jobId:int}/rows/{rowId:int}/skip",
+                (int jobId, int rowId, ClaimsPrincipal principal,
+                        SkipImportRowHandler handler, CancellationToken ct) =>
+                    handler.HandleAsync(jobId, rowId, principal, ct))
+            .WithName("SkipImportRow")
+            .Produces<SkipImportRowResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         return endpoints;
     }

@@ -4,9 +4,9 @@ using NbTcgTrader.Api.Features.Import;
 namespace NbTcgTrader.Api.Common.Extensions;
 
 /// <summary>
-/// Import slice wiring (BACKLOG #13/#14): upload limits and the upload handler.
-/// Validators (none yet — the upload validates its file in the handler) would be
-/// picked up by the assembly-wide FluentValidation scan.
+/// Import slice wiring (BACKLOG #13/#14/#16): upload limits, the upload handler, and the
+/// reconciliation handlers. Validators (e.g. the resolve request) are picked up by the
+/// assembly-wide FluentValidation scan in <see cref="AuthenticationExtensions"/>.
 /// </summary>
 public static class ImportExtensions
 {
@@ -31,6 +31,11 @@ public static class ImportExtensions
 
         services.AddScoped<ImportRowMatcher>();
         services.AddScoped<UploadImportHandler>();
+
+        // Reconciliation handlers (#16): list unmatched rows, resolve, skip.
+        services.AddScoped<ListImportRowsHandler>();
+        services.AddScoped<ResolveImportRowHandler>();
+        services.AddScoped<SkipImportRowHandler>();
         return services;
     }
 }

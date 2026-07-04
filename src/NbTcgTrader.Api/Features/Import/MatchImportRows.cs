@@ -57,9 +57,9 @@ public sealed class ImportRowMatcher(
             }
         }
 
-        job.RowsMatched = job.Rows.Count(r => r.MatchStatus == MatchStatus.AutoMatched);
-        job.RowsUnmatched = job.Rows.Count(r => r.MatchStatus == MatchStatus.Unmatched);
-        job.Status = job.RowsUnmatched == 0 ? ImportStatus.Completed : ImportStatus.NeedsReview;
+        // Shared with manual reconciliation (#16) so both paths compute counts + status
+        // identically; at this point no row is ManuallyMatched yet.
+        ImportReconciliation.RecomputeProgress(job);
     }
 
     /// <summary>
