@@ -59,6 +59,9 @@ try
     // Collection/binder slice handlers (#10).
     builder.Services.AddApiCollection();
 
+    // Import slice: upload limits + handler (#14).
+    builder.Services.AddApiImport(builder.Configuration);
+
     var app = builder.Build();
 
     // Apply migrations on startup in Development only, and only when enabled.
