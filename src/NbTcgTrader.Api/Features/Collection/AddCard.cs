@@ -1,12 +1,10 @@
 using System.Security.Claims;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using NbTcgTrader.Api.Common.Domain;
 using NbTcgTrader.Api.Common.Persistence;
 using NbTcgTrader.Api.Features.Catalog;
-using Npgsql;
 
 namespace NbTcgTrader.Api.Features.Collection;
 
@@ -34,22 +32,17 @@ public sealed class AddCardValidator : AbstractValidator<AddCardRequest>
 
 /// <summary>
 /// Resolves the external id to a local <see cref="Card"/> — persisting the card (and its
-/// <see cref="CardSet"/>/<see cref="Game"/>) from the catalog provider on first use, per
-/// the <c>CatalogMapping</c> contract — then creates the <see cref="CollectionItem"/>.
-/// An id the provider doesn't know is rejected with 404.
+/// <see cref="CardSet"/>/<see cref="Game"/>) from the catalog provider on first use via
+/// the shared <see cref="CatalogCardStore"/> — then creates the
+/// <see cref="CollectionItem"/>. An id the provider doesn't know is rejected with 404.
 /// </summary>
 public sealed class AddCardHandler(
     AppDbContext db,
     ICardCatalogClient catalog,
+    CatalogCardStore cardStore,
     IOptions<CatalogOptions> catalogOptions,
     ILogger<AddCardHandler> logger)
 {
-    // The MVP catalog provider serves Pokémon only (CLAUDE.md §8); the schema stays
-    // TCG-agnostic. When a second game ships, the provider must declare its game
-    // instead of the slice assuming it.
-    private const string GameSlug = "pokemon";
-    private const string GameName = "Pokémon";
-
     public async Task<IResult> HandleAsync(
         AddCardRequest request,
         ClaimsPrincipal principal,
@@ -65,10 +58,7 @@ public sealed class AddCardHandler(
 
         var externalId = request.CardExternalId.Trim();
 
-        var card = await db.Cards
-            .Include(c => c.CardSet)
-            .FirstOrDefaultAsync(c => c.ExternalId == externalId, cancellationToken);
-
+        var card = await cardStore.FindCardAsync(externalId, cancellationToken);
         if (card is null)
         {
             var catalogCard = await catalog.GetCardAsync(externalId, cancellationToken);
@@ -80,8 +70,7 @@ public sealed class AddCardHandler(
                     detail: $"No catalog card exists with id '{externalId}'.");
             }
 
-            var game = await ResolveGameAsync(cancellationToken);
-            card = await StageNewCardAsync(catalogCard, game, cancellationToken);
+            card = await cardStore.StageCardAsync(catalogCard, cancellationToken);
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -106,72 +95,5 @@ public sealed class AddCardHandler(
             item, catalogOptions.Value.PlaceholderImageUrl);
 
         return Results.Created($"/collection/items/{item.Id}", response);
-    }
-
-    private async Task<Game> ResolveGameAsync(CancellationToken cancellationToken)
-    {
-        var game = await db.Games
-            .FirstOrDefaultAsync(g => g.Slug == GameSlug, cancellationToken);
-
-        if (game is null)
-        {
-            game = new Game { Name = GameName, Slug = GameSlug };
-            db.Games.Add(game);
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
-            {
-                db.Entry(game).State = EntityState.Detached;
-
-                game = await db.Games
-                    .FirstOrDefaultAsync(g => g.Slug == GameSlug, cancellationToken);
-
-                if (game is null)
-                {
-                    throw;
-                }
-            }
-        }
-
-        return game;
-    }
-
-    private static bool IsUniqueViolation(DbUpdateException exception) =>
-        exception.InnerException is PostgresException
-        {
-            SqlState: PostgresErrorCodes.UniqueViolation,
-        };
-
-    /// <summary>
-    /// Stages the card (and, when present and unseen, its set) for insert. Navigations
-    /// are used instead of FK ids because the game/set may themselves be new this call;
-    /// everything is written by the single SaveChanges. Concurrent first-adds of the
-    /// same card can race and insert duplicate catalog rows — accepted for the MVP.
-    /// </summary>
-    private async Task<Card> StageNewCardAsync(
-        CatalogCard catalogCard, Game game, CancellationToken cancellationToken)
-    {
-        CardSet? set = null;
-        if (catalogCard.Set is { } catalogSet)
-        {
-            set = await db.CardSets.FirstOrDefaultAsync(
-                s => s.ExternalId == catalogSet.ExternalId, cancellationToken);
-
-            if (set is null)
-            {
-                set = catalogSet.ToCardSet(game.Id);
-                set.Game = game;
-                db.CardSets.Add(set);
-            }
-        }
-
-        var card = catalogCard.ToCard(game.Id, set?.Id);
-        card.Game = game;
-        card.CardSet = set;
-        db.Cards.Add(card);
-
-        return card;
     }
 }

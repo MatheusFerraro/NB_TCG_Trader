@@ -51,6 +51,10 @@ public static class CardCatalogExtensions
         // Catalog slice handlers.
         services.AddScoped<SearchCardsHandler>();
 
+        // Shared provider-result persistence: add-to-binder (#10) and import
+        // matching (#15) stage catalog rows through the same store.
+        services.AddScoped<CatalogCardStore>();
+
         // Catalog lookups are cached in memory (CLAUDE.md §8). No cache exists yet
         // elsewhere, so register it here; AddMemoryCache is idempotent if reused later.
         services.AddMemoryCache();

@@ -6,9 +6,12 @@ using System.Text.Json;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NbTcgTrader.Api.Common.Persistence;
+using NbTcgTrader.Api.Features.Catalog;
 using Shouldly;
 using Testcontainers.PostgreSql;
 
@@ -77,7 +80,9 @@ public sealed class ImportUploadTests : IAsyncLifetime
         job.ShouldNotBeNull();
         job.Id.ShouldBeGreaterThan(0);
         job.FileName.ShouldBe("my cards.csv");
-        job.Status.ShouldBe("Pending");
+        // The catalog fake is empty here, so nothing auto-matches (#15) and the job
+        // lands in review with every row unmatched.
+        job.Status.ShouldBe("NeedsReview");
         job.RowsTotal.ShouldBe(2);
         job.RowsMatched.ShouldBe(0);
         job.RowsUnmatched.ShouldBe(2);
@@ -291,6 +296,8 @@ public sealed class ImportUploadTests : IAsyncLifetime
 
     // Boots the real app against the Testcontainers Postgres (migrations on) with a
     // throwaway Jwt/placeholder config; per-test Import:* settings tighten the caps.
+    // The provider client is swapped for an (empty) fake so the synchronous matching
+    // step (#15) never touches the network — every row simply stays Unmatched.
     private sealed class ImportApiFactory(
         string connectionString,
         (string Key, string Value)[] settings) : WebApplicationFactory<Program>
@@ -311,6 +318,13 @@ public sealed class ImportUploadTests : IAsyncLifetime
             {
                 builder.UseSetting(key, value);
             }
+
+            builder.ConfigureTestServices(services =>
+            {
+                services.RemoveAll<ICardCatalogClient>();
+                services.AddSingleton<ICardCatalogClient>(
+                    new FakeCardCatalogClient { SearchFromCards = true });
+            });
         }
     }
 }
