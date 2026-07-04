@@ -6,6 +6,7 @@ using NbTcgTrader.Api.Features.Auth;
 using NbTcgTrader.Api.Features.Catalog;
 using NbTcgTrader.Api.Features.Collection;
 using NbTcgTrader.Api.Features.Import;
+using NbTcgTrader.Api.Features.Marketplace;
 using Serilog;
 
 // Bootstrap logger: captures anything that fails before the host is built.
@@ -62,6 +63,9 @@ try
     // Import slice: upload limits + handler (#14).
     builder.Services.AddApiImport(builder.Configuration);
 
+    // Marketplace slice: browse/search public listings (#17).
+    builder.Services.AddApiMarketplace();
+
     var app = builder.Build();
 
     // Apply migrations on startup in Development only, and only when enabled.
@@ -109,6 +113,7 @@ try
     app.MapCatalogEndpoints();
     app.MapCollectionEndpoints();
     app.MapImportEndpoints();
+    app.MapMarketplaceEndpoints();
 
     app.Run();
 }
