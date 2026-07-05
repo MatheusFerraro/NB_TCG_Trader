@@ -66,6 +66,18 @@ describe('validateDraft', () => {
     expect(validateDraft(draft)).toEqual(['Price is required when the item is for sale.'])
   })
 
+  it('rejects non-numeric and non-positive prices when provided', () => {
+    expect(validateDraft({ ...emptyDraft(), price: 'abc' })).toEqual([
+      'Price must be greater than 0.',
+    ])
+    expect(validateDraft({ ...emptyDraft(), price: '0' })).toEqual([
+      'Price must be greater than 0.',
+    ])
+    expect(validateDraft({ ...emptyDraft(), price: '-1' })).toEqual([
+      'Price must be greater than 0.',
+    ])
+  })
+
   it('rejects out-of-range and non-integer quantities', () => {
     expect(validateDraft({ ...emptyDraft(), quantity: '0' })).toEqual([
       'Quantity must be between 1 and 999.',

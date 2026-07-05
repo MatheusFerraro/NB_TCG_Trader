@@ -34,8 +34,15 @@ export function validateDraft(draft: Draft): string[] {
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) {
     errors.push('Quantity must be between 1 and 999.')
   }
-  if (draft.isForSale && draft.price.trim() === '') {
+  const priceText = draft.price.trim()
+  if (draft.isForSale && priceText === '') {
     errors.push('Price is required when the item is for sale.')
+  }
+  if (priceText !== '') {
+    const price = Number(priceText)
+    if (!Number.isFinite(price) || price <= 0) {
+      errors.push('Price must be greater than 0.')
+    }
   }
   return errors
 }

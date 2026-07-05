@@ -76,7 +76,7 @@ export function AddCardPage() {
       number: number.trim(),
     }
     if (!filters.query && !filters.set && !filters.number) {
-      setSearch({ status: 'error', message: 'Type a card name to search.' })
+      setSearch({ status: 'error', message: 'Type a card name, set, or number to search.' })
       return
     }
     void runSearch(filters, 1)
