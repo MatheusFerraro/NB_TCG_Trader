@@ -220,6 +220,70 @@ public sealed class MarketplaceEndpointsTests : IAsyncLifetime
         response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
     }
 
+    [SkippableFact]
+    public async Task Listing_detail_reveals_only_public_contact_fields()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var seller = await RegisterAsync(client, city: "Moncton", country: "Canada");
+
+        (await SendPutAsync(client, seller, "/auth/me", new
+            {
+                displayName = "Ash",
+                city = "Moncton",
+                country = "Canada",
+                contactEmail = "ash@example.com",
+                discordHandle = "ash#1234",
+                instagramHandle = "ash_ketchum",
+            }))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+        var id = await ListAsync(client, seller, "base1-4", price: 50m, currency: "CAD");
+
+        // No auth header: the detail page, like browse, is public.
+        var response = await client.GetAsync($"/marketplace/{id}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var detail = await response.Content.ReadFromJsonAsync<ListingDetailDto>(Json);
+        detail.ShouldNotBeNull();
+        detail.Id.ShouldBe(id);
+        detail.Price.ShouldBe(50m);
+        detail.Currency.ShouldBe("CAD");
+        detail.Card.Name.ShouldBe("Charizard");
+        detail.Card.GameName.ShouldBe("Pokémon");
+        detail.Seller.DisplayName.ShouldBe("Ash");
+        detail.Seller.ContactEmail.ShouldBe("ash@example.com");
+        detail.Seller.DiscordHandle.ShouldBe("ash#1234");
+        detail.Seller.InstagramHandle.ShouldBe("ash_ketchum");
+
+        // Nothing beyond the public seller fields crosses the boundary: no user id,
+        // no Identity login email property, no hash.
+        var body = await (await client.GetAsync($"/marketplace/{id}")).Content
+            .ReadAsStringAsync();
+        body.ShouldNotContain("userId");
+        body.ShouldNotContain("\"email\"");
+        body.ShouldNotContain("passwordHash");
+    }
+
+    [SkippableFact]
+    public async Task Private_or_not_for_sale_listing_detail_returns_404()
+    {
+        var factory = CreateFactory(KnownCatalog());
+        var client = factory.CreateClient();
+        var seller = await RegisterAsync(client, city: "Moncton", country: "Canada");
+
+        var privateId = await ListAsync(client, seller, "base1-8", price: 30m,
+            currency: "CAD", isPrivate: true);
+        var notForSaleId = await AddOnlyAsync(client, seller, "base1-2");
+
+        foreach (var id in new[] { privateId, notForSaleId, 999_999 })
+        {
+            var response = await client.GetAsync($"/marketplace/{id}");
+            response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+            response.Content.Headers.ContentType?.MediaType
+                .ShouldBe("application/problem+json");
+        }
+    }
+
     private static FakeCardCatalogClient KnownCatalog()
     {
         var baseSet = new CatalogSet("base1", "Base", "BS", new DateOnly(1999, 1, 9));
@@ -274,7 +338,8 @@ public sealed class MarketplaceEndpointsTests : IAsyncLifetime
     }
 
     // Adds a card and flags it for sale, so it becomes a marketplace listing.
-    private static async Task ListAsync(
+    // Returns the collection item id, which doubles as the listing id (#18).
+    private static async Task<int> ListAsync(
         HttpClient client, string token, string cardExternalId,
         decimal price, string currency, bool isPrivate = false)
     {
@@ -290,6 +355,7 @@ public sealed class MarketplaceEndpointsTests : IAsyncLifetime
                 isPrivate,
             });
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        return id;
     }
 
     private async Task<PageDto> BrowseAsync(HttpClient client, string queryString)
@@ -329,6 +395,14 @@ public sealed class MarketplaceEndpointsTests : IAsyncLifetime
         string ImageUrl, bool HasImage, string? SetName, string GameName);
 
     private sealed record SellerDto(string DisplayName, string? City, string? Country);
+
+    private sealed record ListingDetailDto(
+        int Id, ListingCardDto Card, int Quantity, string Condition,
+        decimal? Price, string Currency, string? Notes, SellerContactDto Seller);
+
+    private sealed record SellerContactDto(
+        string DisplayName, string? City, string? Country,
+        string? ContactEmail, string? DiscordHandle, string? InstagramHandle);
 
     // Boots the real app against the Testcontainers Postgres (migrations on), with the
     // provider client replaced by the fake and a throwaway Jwt/placeholder config.

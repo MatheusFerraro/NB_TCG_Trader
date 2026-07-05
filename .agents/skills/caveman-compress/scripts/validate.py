@@ -97,8 +97,8 @@ def count_bullets(text):
 def strip_fenced_code_blocks(text):
     """Remove fenced code blocks before scanning inline code.
 
-    Mirrors extract_code_blocks' CommonMark-ish fence handling so backticks inside
-    code blocks do not look like inline code that must be preserved separately.
+    Uses the same line-based fence rules as extract_code_blocks so variable
+    length and indented fences are treated consistently by both validators.
     """
     lines = text.split("\n")
     kept = []

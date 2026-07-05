@@ -48,3 +48,35 @@ public sealed record MarketplaceSellerResponse(
     string DisplayName,
     string? City,
     string? Country);
+
+/// <summary>
+/// A single public for-sale listing with the seller's contact channels revealed
+/// (BACKLOG #18). Same shape as <see cref="MarketplaceListingResponse"/> but the seller
+/// block includes the contact fields, since "contact seller" in the MVP just means
+/// showing these handles (CLAUDE.md §2).
+/// </summary>
+public sealed record MarketplaceListingDetailResponse(
+    int Id,
+    MarketplaceCardResponse Card,
+    int Quantity,
+    CardCondition Condition,
+    decimal? Price,
+    Currency Currency,
+    string? Notes,
+    MarketplaceSellerContactResponse Seller,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+/// <summary>
+/// The seller as shown on the listing-detail page: public identity/location plus the
+/// three deliberately-public contact channels the user chose to fill in on their
+/// profile. These are the ONLY <see cref="Common.Domain.AppUser"/> fields that may
+/// cross the API boundary here (CLAUDE.md §15) — never Id, Email, or anything private.
+/// </summary>
+public sealed record MarketplaceSellerContactResponse(
+    string DisplayName,
+    string? City,
+    string? Country,
+    string? ContactEmail,
+    string? DiscordHandle,
+    string? InstagramHandle);
