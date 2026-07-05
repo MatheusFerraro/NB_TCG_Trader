@@ -1,7 +1,7 @@
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from './tokenStore'
 import type { AuthResponse } from '../features/auth/types'
 
-const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:5167'
+export const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:5167'
 
 /** RFC 7807 ProblemDetails as returned by the API for every failure. */
 export interface ProblemDetails {
@@ -91,6 +91,7 @@ async function doRefresh(): Promise<AuthResponse | null> {
 }
 
 export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
+  /** JSON-serialized unless it is a FormData (multipart upload). */
   body?: unknown
   /** Set false for anonymous endpoints (login/register). Default true. */
   auth?: boolean
@@ -100,13 +101,15 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
  * JSON fetch wrapper: prefixes the API base URL, attaches the Bearer token,
  * and on a 401 refreshes the session once and retries. Throws ApiError on any
  * non-2xx response; returns the parsed JSON body (undefined for 204).
+ * A FormData body is sent as-is so the browser sets the multipart boundary.
  */
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { body, auth = true, headers, ...init } = options
+  const isFormData = body instanceof FormData
 
   const doFetch = () => {
     const requestHeaders = new Headers(headers)
-    if (body !== undefined) {
+    if (body !== undefined && !isFormData) {
       requestHeaders.set('Content-Type', 'application/json')
     }
     const token = getAccessToken()
@@ -116,7 +119,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     return fetch(`${API_URL}${path}`, {
       ...init,
       headers: requestHeaders,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
     })
   }
 
