@@ -5,6 +5,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
+using NbTcgTrader.Api.Common.Errors;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
 namespace NbTcgTrader.Api.Features.Catalog;
 
@@ -171,12 +174,40 @@ public sealed class PokemonTcgCatalogClient(
         return metadata.Count == 0 ? null : JsonSerializer.Serialize(metadata, JsonOptions);
     }
 
-    private async Task<T> GetOrCreateAsync<T>(string cacheKey, Func<Task<T>> factory) =>
-        (await cache.GetOrCreateAsync(cacheKey, async entry =>
+    private async Task<T> GetOrCreateAsync<T>(string cacheKey, Func<Task<T>> factory)
+    {
+        try
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheMinutes);
-            return await factory();
-        }))!;
+            return (await cache.GetOrCreateAsync(cacheKey, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheMinutes);
+                return await factory();
+            }))!;
+        }
+        catch (Exception ex) when (IsProviderFailure(ex))
+        {
+            // Expected operational failure (provider slow, down, or rate-limited after
+            // retries) — surface it as a client-safe 503 instead of an unhandled 500.
+            logger.LogWarning(ex, "Card catalog provider request failed for {CacheKey}", cacheKey);
+            throw new UpstreamUnavailableException(
+                "Card catalog temporarily unavailable",
+                "The card catalog did not respond. Please try again in a moment.",
+                ex);
+        }
+    }
+
+    /// <summary>
+    /// Failures the resilience pipeline gives up on: transport errors, the pipeline's
+    /// total timeout, an open circuit, or HttpClient's own timeout (TaskCanceled while
+    /// the caller has NOT cancelled — a user-aborted request must propagate as-is).
+    /// </summary>
+    private static bool IsProviderFailure(Exception ex) => ex switch
+    {
+        HttpRequestException or TimeoutRejectedException or BrokenCircuitException => true,
+        TaskCanceledException tce => tce.CancellationToken.IsCancellationRequested is false
+                                     || tce.InnerException is TimeoutException,
+        _ => false,
+    };
 
     // --- Provider JSON shapes (pokemontcg.io v2). Internal to the mapping above. ---
 
