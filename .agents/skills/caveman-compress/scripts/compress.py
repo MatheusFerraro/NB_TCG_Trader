@@ -6,11 +6,9 @@ Usage:
     python scripts/compress.py <filepath>
 """
 
-import os
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 from typing import List
 
@@ -66,28 +64,9 @@ SENSITIVE_NAME_TOKENS = (
 )
 
 
-def backup_dir_for(filepath: Path) -> Path:
-    """Resolve the out-of-tree backup directory for a given source file.
-
-    Backups must live OUTSIDE the source directory so skill auto-loaders
-    (Claude Code rules/, opencode instructions/, etc.) stop re-ingesting the
-    `.original.md` copies as live files. Base dir is platform-aware:
-      - Windows: %LOCALAPPDATA%\\caveman-compress\\backups
-      - else:    $XDG_DATA_HOME/caveman-compress/backups if set,
-                 else ~/.local/share/caveman-compress/backups
-
-    The source file's parent-dir name is mirrored under the base to reduce
-    cross-project collisions (e.g. two `task.md` files in different repos).
-    """
-    if os.name == "nt" or sys.platform == "win32":
-        local_appdata = os.environ.get("LOCALAPPDATA")
-        base = Path(local_appdata) if local_appdata else Path.home() / "AppData" / "Local"
-        base = base / "caveman-compress" / "backups"
-    else:
-        xdg = os.environ.get("XDG_DATA_HOME")
-        base = Path(xdg) if xdg else Path.home() / ".local" / "share"
-        base = base / "caveman-compress" / "backups"
-    return base / filepath.parent.name
+def backup_path_for(filepath: Path) -> Path:
+    """Resolve the alongside human-readable backup path for a source file."""
+    return filepath.with_name(filepath.stem + ".original.md")
 
 
 def is_sensitive_path(filepath: Path) -> bool:
@@ -246,24 +225,20 @@ def compress_file(filepath: Path) -> bool:
         print("Skipping (not natural language)")
         return False
 
-    original_text = filepath.read_text(errors="ignore")
-    # Store backup outside the source directory so skill auto-loaders don't
-    # re-ingest the `.original.md` copy as a live file. Mirror the source's
-    # parent-dir name + stem under a platform-aware base to reduce collisions.
-    backup_dir = backup_dir_for(filepath)
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    backup_path = backup_dir / (filepath.stem + ".original.md")
+    backup_path = backup_path_for(filepath)
+    backup_exists = backup_path.exists()
+    original_text = (
+        backup_path.read_text(errors="ignore")
+        if backup_exists
+        else filepath.read_text(errors="ignore")
+    )
 
     if not original_text.strip():
         print("❌ Refusing to compress: file is empty or whitespace-only.")
         return False
 
-    # Check if backup already exists to prevent accidental overwriting
-    if backup_path.exists():
-        print(f"⚠️ Backup file already exists: {backup_path}")
-        print("The original backup may contain important content.")
-        print("Aborting to prevent data loss. Please remove or rename the backup file if you want to proceed.")
-        return False
+    if backup_exists:
+        print(f"Using existing human-readable original: {backup_path}")
 
     # Split YAML frontmatter off before compression. Claude tends to strip or
     # rewrite frontmatter despite preserve-structure rules; we keep it verbatim
@@ -296,19 +271,20 @@ def compress_file(filepath: Path) -> bool:
     # Reassemble: frontmatter (verbatim) + compressed body
     compressed = frontmatter + compressed_body
 
-    # Save original as backup, then verify the backup readback before
-    # touching the input file. If the filesystem dropped bytes (encoding,
-    # antivirus, disk full), unlink the bad backup and abort instead of
-    # leaving the user with a corrupt backup + compressed primary.
-    backup_path.write_text(original_text)
+    # Save the first-run original as an alongside backup, then verify the
+    # readback before touching the input file. If a backup already exists, it
+    # is the edited human-readable source for this compression pass.
+    if not backup_exists:
+        backup_path.write_text(original_text)
     backup_readback = backup_path.read_text(errors="ignore")
     if backup_readback != original_text:
         print(f"❌ Backup write verification failed: {backup_path}")
         print("   In-memory original differs from on-disk backup. Aborting before touching the input file.")
-        try:
-            backup_path.unlink()
-        except OSError:
-            pass
+        if not backup_exists:
+            try:
+                backup_path.unlink()
+            except OSError:
+                pass
         return False
     filepath.write_text(compressed)
 
@@ -329,7 +305,8 @@ def compress_file(filepath: Path) -> bool:
         if attempt == MAX_RETRIES - 1:
             # Restore original on failure
             filepath.write_text(original_text)
-            backup_path.unlink(missing_ok=True)
+            if not backup_exists:
+                backup_path.unlink(missing_ok=True)
             print("❌ Failed after retries — original restored")
             return False
 

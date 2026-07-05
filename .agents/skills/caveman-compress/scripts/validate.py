@@ -94,10 +94,42 @@ def count_bullets(text):
     return len(BULLET_REGEX.findall(text))
 
 
+def strip_fenced_code_blocks(text):
+    """Remove fenced code blocks before scanning inline code.
+
+    Uses the same line-based fence rules as extract_code_blocks so variable
+    length and indented fences are treated consistently by both validators.
+    """
+    lines = text.split("\n")
+    kept = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        m = FENCE_OPEN_REGEX.match(lines[i])
+        if not m:
+            kept.append(lines[i])
+            i += 1
+            continue
+
+        fence_char = m.group(2)[0]
+        fence_len = len(m.group(2))
+        i += 1
+        while i < n:
+            close_m = FENCE_OPEN_REGEX.match(lines[i])
+            i += 1
+            if (
+                close_m
+                and close_m.group(2)[0] == fence_char
+                and len(close_m.group(2)) >= fence_len
+                and close_m.group(3).strip() == ""
+            ):
+                break
+
+    return "\n".join(kept)
+
+
 def extract_inline_codes(text):
-    text_without_fences = re.sub(r"^```[\s\S]*?^```", "", text, flags=re.MULTILINE)
-    text_without_fences = re.sub(r"^~~~[\s\S]*?^~~~", "", text_without_fences, flags=re.MULTILINE)
-    return re.findall(r"`([^`]+)`", text_without_fences)
+    return re.findall(r"`([^`]+)`", strip_fenced_code_blocks(text))
 
 
 # ---------- Validators ----------
