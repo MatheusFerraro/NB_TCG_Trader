@@ -11,16 +11,27 @@ namespace NbTcgTrader.Tests;
 public sealed class FakeHttpMessageHandler(
     Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
 {
+    // Guarded by a lock: the catalog client's background prefetch sends requests from
+    // a thread-pool thread while the test thread polls the properties below.
     private readonly List<HttpRequestMessage> _requests = [];
 
-    /// <summary>Every request the handler has seen, in order.</summary>
-    public IReadOnlyList<HttpRequestMessage> Requests => _requests;
+    /// <summary>Every request the handler has seen, in order (snapshot).</summary>
+    public IReadOnlyList<HttpRequestMessage> Requests
+    {
+        get { lock (_requests) { return _requests.ToArray(); } }
+    }
 
     /// <summary>How many requests reached the handler (e.g. to prove caching).</summary>
-    public int CallCount => _requests.Count;
+    public int CallCount
+    {
+        get { lock (_requests) { return _requests.Count; } }
+    }
 
     /// <summary>The URI of the most recent request, or <c>null</c> if none.</summary>
-    public Uri? LastRequestUri => _requests.Count == 0 ? null : _requests[^1].RequestUri;
+    public Uri? LastRequestUri
+    {
+        get { lock (_requests) { return _requests.Count == 0 ? null : _requests[^1].RequestUri; } }
+    }
 
     /// <summary>Convenience factory: always return <paramref name="json"/> with the given status.</summary>
     public static FakeHttpMessageHandler Json(string json, HttpStatusCode status = HttpStatusCode.OK) =>
@@ -33,7 +44,11 @@ public sealed class FakeHttpMessageHandler(
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        _requests.Add(request);
+        lock (_requests)
+        {
+            _requests.Add(request);
+        }
+
         return Task.FromResult(responder(request));
     }
 }

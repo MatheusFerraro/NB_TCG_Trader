@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using NbTcgTrader.Api.Features.Catalog;
 
@@ -32,6 +33,12 @@ public static class CardCatalogExtensions
             .Validate(
                 o => o.TimeoutSeconds > 0,
                 "CardApi:TimeoutSeconds must be positive.")
+            .Validate(
+                o => o.AttemptTimeoutSeconds > 0,
+                "CardApi:AttemptTimeoutSeconds must be positive.")
+            .Validate(
+                o => o.AttemptTimeoutSeconds <= o.TimeoutSeconds,
+                "CardApi:AttemptTimeoutSeconds must be less than or equal to CardApi:TimeoutSeconds.")
             .Validate(
                 o => o.MaxPageSize > 0,
                 "CardApi:MaxPageSize must be positive.")
@@ -79,7 +86,20 @@ public static class CardCatalogExtensions
             // Bounded retries with exponential backoff + per-try timeout. The standard
             // handler treats 429/5xx/timeouts as transient and respects Retry-After,
             // covering the provider's rate limits (BACKLOG #8).
-            .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler()
+            // Fail fast on a single slow try: the provider spikes to 10-30s, so a short
+            // per-attempt timeout hands the wait to a retry instead of the user. The
+            // pipeline's total budget stays within the HttpClient timeout above.
+            .Configure((resilience, serviceProvider) =>
+            {
+                var options = serviceProvider
+                    .GetRequiredService<IOptions<CardCatalogOptions>>().Value;
+
+                resilience.AttemptTimeout.Timeout =
+                    TimeSpan.FromSeconds(options.AttemptTimeoutSeconds);
+                resilience.TotalRequestTimeout.Timeout =
+                    TimeSpan.FromSeconds(options.TimeoutSeconds);
+            });
 
         return services;
     }
