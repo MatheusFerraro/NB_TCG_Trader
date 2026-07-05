@@ -25,3 +25,7 @@ export function updateItem(id: number, request: UpdateItemRequest): Promise<Coll
     body: request,
   })
 }
+
+export function deleteItem(id: number): Promise<void> {
+  return apiFetch<void>(`/collection/items/${id}`, { method: 'DELETE' })
+}

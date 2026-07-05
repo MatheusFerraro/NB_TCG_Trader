@@ -119,6 +119,39 @@ describe('updateItem', () => {
   })
 })
 
+describe('deleteItem', () => {
+  it('DELETEs the item endpoint and resolves on 204', async () => {
+    const { deleteItem, setTokens } = await loadApi()
+    setTokens('access-1', 'refresh-1')
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+    await expect(deleteItem(7)).resolves.toBeUndefined()
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`${API}/collection/items/7`)
+    expect(init?.method).toBe('DELETE')
+    expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer access-1')
+  })
+
+  it('surfaces a 404 ProblemDetails as ApiError', async () => {
+    const { deleteItem, setTokens } = await loadApi()
+    const { ApiError } = await import('../../lib/apiClient')
+    setTokens('access-1', 'refresh-1')
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(404, {
+        title: 'Collection item not found',
+        status: 404,
+        detail: 'No collection item 7 exists in your binder.',
+      }),
+    )
+
+    const error = await deleteItem(7).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as InstanceType<typeof ApiError>).status).toBe(404)
+  })
+})
+
 describe('formatPrice', () => {
   it('formats CAD with the en-CA locale', () => {
     expect(formatPrice(1234.5, 'CAD')).toMatch(/^(CA)?\$\s?1,234\.50$/)
