@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
@@ -27,9 +28,25 @@ public sealed class PokemonTcgCatalogClient(
     private static readonly JsonSerializerOptions JsonOptions =
         new(JsonSerializerDefaults.Web) { PropertyNameCaseInsensitive = true };
 
+    /// <summary>
+    /// pokemontcg.io <c>select</c> projection: only the fields <see cref="MapCard"/>
+    /// consumes, so the provider returns a much smaller payload.
+    /// </summary>
+    private const string SelectFields = "id,name,number,rarity,images,set";
+
+    /// <summary>Upper bound on a background next-page prefetch (never a user's token).</summary>
+    private static readonly TimeSpan PrefetchTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// Cache keys with a prefetch currently in flight, so concurrent searches for the
+    /// same page don't stampede the provider. Static because the typed client is
+    /// transient while the warmed <see cref="IMemoryCache"/> is a singleton.
+    /// </summary>
+    private static readonly ConcurrentDictionary<string, byte> InFlightPrefetches = new();
+
     private readonly CardCatalogOptions _options = options.Value;
 
-    public Task<CatalogPage<CatalogCard>> SearchCardsAsync(
+    public async Task<CatalogPage<CatalogCard>> SearchCardsAsync(
         CatalogSearchQuery query,
         CancellationToken cancellationToken)
     {
@@ -37,6 +54,28 @@ public sealed class PokemonTcgCatalogClient(
         var pageSize = Math.Clamp(query.PageSize, 1, _options.MaxPageSize);
         var q = BuildLuceneQuery(query);
 
+        var result = await SearchPageAsync(q, page, pageSize, cancellationToken);
+
+        // Warm the next page in the background: the provider is slow (10-30s spikes),
+        // so the follow-up "next page" click should hit the cache instead.
+        if (_options.PrefetchNextPage && page * pageSize < result.TotalCount)
+        {
+            PrefetchPage(q, page + 1, pageSize);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// The single fetch path for a search page — both user requests and background
+    /// prefetches go through here so the cache key format stays identical.
+    /// </summary>
+    private Task<CatalogPage<CatalogCard>> SearchPageAsync(
+        string q,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
         var cacheKey = $"catalog:search:{q}|{page}|{pageSize}";
 
         return GetOrCreateAsync(cacheKey, async () =>
@@ -46,6 +85,7 @@ public sealed class PokemonTcgCatalogClient(
                 ["q"] = q,
                 ["page"] = page.ToString(CultureInfo.InvariantCulture),
                 ["pageSize"] = pageSize.ToString(CultureInfo.InvariantCulture),
+                ["select"] = SelectFields,
             });
 
             var envelope = await http.GetFromJsonAsync<CardsEnvelope>(url, JsonOptions, cancellationToken)
@@ -64,6 +104,39 @@ public sealed class PokemonTcgCatalogClient(
         });
     }
 
+    /// <summary>
+    /// Fire-and-forget cache warming for a search page. Skipped when the page is
+    /// already cached or another prefetch for the same key is in flight. Runs on its
+    /// own short timeout — never the request's token — and swallows every failure:
+    /// a missed prefetch only means the next page loads at provider speed.
+    /// </summary>
+    private void PrefetchPage(string q, int page, int pageSize)
+    {
+        var cacheKey = $"catalog:search:{q}|{page}|{pageSize}";
+
+        if (cache.TryGetValue(cacheKey, out _) || !InFlightPrefetches.TryAdd(cacheKey, 0))
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var cts = new CancellationTokenSource(PrefetchTimeout);
+                await SearchPageAsync(q, page, pageSize, cts.Token);
+            }
+            catch (Exception ex)
+            {
+                logger.LogDebug(ex, "Next-page prefetch failed for {CacheKey}", cacheKey);
+            }
+            finally
+            {
+                InFlightPrefetches.TryRemove(cacheKey, out _);
+            }
+        });
+    }
+
     public Task<CatalogCard?> GetCardAsync(string externalId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(externalId);
@@ -71,7 +144,8 @@ public sealed class PokemonTcgCatalogClient(
         return GetOrCreateAsync<CatalogCard?>($"catalog:card:{externalId}", async () =>
         {
             // Provider ids are url-safe, but escape defensively rather than concatenating.
-            var url = $"cards/{Uri.EscapeDataString(externalId)}";
+            var url = QueryHelpers.AddQueryString(
+                $"cards/{Uri.EscapeDataString(externalId)}", "select", SelectFields);
             using var response = await http.GetAsync(url, cancellationToken);
 
             if (response.StatusCode == HttpStatusCode.NotFound)

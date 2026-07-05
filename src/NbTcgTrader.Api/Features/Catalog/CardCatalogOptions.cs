@@ -25,6 +25,18 @@ public sealed class CardCatalogOptions
     /// <summary>Per-request HTTP timeout in seconds.</summary>
     public int TimeoutSeconds { get; init; } = 30;
 
+    /// <summary>
+    /// Per-attempt timeout in seconds for the resilience pipeline: a single slow try
+    /// fails fast and is retried instead of hanging for the full request timeout.
+    /// </summary>
+    public int AttemptTimeoutSeconds { get; init; } = 5;
+
     /// <summary>Upper bound on the page size requested from the provider.</summary>
     public int MaxPageSize { get; init; } = 50;
+
+    /// <summary>
+    /// Whether a successful search warms the next page's cache in the background.
+    /// On by default; tests and integrations can switch it off for determinism.
+    /// </summary>
+    public bool PrefetchNextPage { get; init; } = true;
 }
