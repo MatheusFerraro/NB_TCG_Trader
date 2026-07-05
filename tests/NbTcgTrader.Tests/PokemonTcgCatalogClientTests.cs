@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using NbTcgTrader.Api.Common.Errors;
 using NbTcgTrader.Api.Common.Extensions;
 using NbTcgTrader.Api.Features.Catalog;
 using Shouldly;
@@ -126,6 +127,31 @@ public class PokemonTcgCatalogClientTests
 
         page.Items.ShouldBeEmpty();
         page.TotalCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task SearchCards_maps_resilience_timeout_to_upstream_unavailable()
+    {
+        // The resilience pipeline throws TimeoutRejectedException when the provider
+        // exhausts the total timeout (the "pokemontcg.io hangs" incident).
+        var handler = new FakeHttpMessageHandler(
+            _ => throw new Polly.Timeout.TimeoutRejectedException());
+        var client = CreateClient(handler);
+
+        var ex = await Should.ThrowAsync<UpstreamUnavailableException>(
+            () => client.SearchCardsAsync(new CatalogSearchQuery(Name: "Mew"), default));
+
+        ex.Title.ShouldBe("Card catalog temporarily unavailable");
+    }
+
+    [Fact]
+    public async Task SearchCards_maps_provider_5xx_to_upstream_unavailable()
+    {
+        var client = CreateClient(
+            FakeHttpMessageHandler.Json("{}", HttpStatusCode.ServiceUnavailable));
+
+        await Should.ThrowAsync<UpstreamUnavailableException>(
+            () => client.SearchCardsAsync(new CatalogSearchQuery(Name: "Mew"), default));
     }
 
     [Fact]

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError } from '../../lib/apiClient'
 import { updateItem } from './collectionApi'
-import { draftFrom, toUpdateRequest } from './draft'
+import { draftFrom, toUpdateRequest, validateDraft } from './draft'
 import type { Draft } from './draft'
 import { formatPrice } from './format'
 import { CARD_CONDITIONS, CURRENCIES } from './types'
@@ -27,6 +27,11 @@ export function BinderItemCard({ item, onSaved }: BinderItemCardProps) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    const clientErrors = validateDraft(draft)
+    if (clientErrors.length > 0) {
+      setErrors(clientErrors)
+      return
+    }
     setErrors([])
     setSaving(true)
     try {

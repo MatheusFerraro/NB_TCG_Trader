@@ -54,6 +54,26 @@ describe('getBinder', () => {
   })
 })
 
+describe('addCard', () => {
+  it('POSTs the external id, quantity, and condition', async () => {
+    const { addCard, setTokens } = await loadApi()
+    setTokens('access-1', 'refresh-1')
+    fetchMock.mockResolvedValueOnce(jsonResponse(201, { id: 9 }))
+
+    const created = await addCard({ cardExternalId: 'base1-4', quantity: 2, condition: 'NM' })
+
+    expect(created.id).toBe(9)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe(`${API}/collection/items`)
+    expect(init?.method).toBe('POST')
+    expect(JSON.parse(init?.body as string)).toEqual({
+      cardExternalId: 'base1-4',
+      quantity: 2,
+      condition: 'NM',
+    })
+  })
+})
+
 describe('updateItem', () => {
   const request: UpdateItemRequest = {
     quantity: 3,
