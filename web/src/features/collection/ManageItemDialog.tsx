@@ -23,6 +23,7 @@ interface ManageItemDialogProps {
 export function ManageItemDialog({ item, onSaved, onDeleted, onClose }: ManageItemDialogProps) {
   const uid = useId()
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const keepCardButtonRef = useRef<HTMLButtonElement>(null)
   const [draft, setDraft] = useState<Draft>(() => draftFrom(item))
   const [errors, setErrors] = useState<string[]>([])
   const [busy, setBusy] = useState<'idle' | 'saving' | 'deleting'>('idle')
@@ -31,8 +32,18 @@ export function ManageItemDialog({ item, onSaved, onDeleted, onClose }: ManageIt
   useEffect(() => {
     const dialog = dialogRef.current
     dialog?.showModal()
-    return () => dialog?.close()
+    return () => {
+      if (dialog?.open) {
+        dialog.close()
+      }
+    }
   }, [])
+
+  useEffect(() => {
+    if (confirmingDelete) {
+      keepCardButtonRef.current?.focus()
+    }
+  }, [confirmingDelete])
 
   function handleBackdropClick(event: MouseEvent<HTMLDialogElement>) {
     // Clicks on the ::backdrop hit the <dialog> element itself; clicks on the
@@ -271,6 +282,7 @@ export function ManageItemDialog({ item, onSaved, onDeleted, onClose }: ManageIt
                     {busy === 'deleting' ? 'Deleting…' : 'Yes, delete it'}
                   </button>
                   <button
+                    ref={keepCardButtonRef}
                     type="button"
                     className="link-button"
                     onClick={() => setConfirmingDelete(false)}
