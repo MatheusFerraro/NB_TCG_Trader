@@ -38,7 +38,7 @@ public sealed class PokemonTcgCatalogClient(
     private static readonly TimeSpan PrefetchTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>
-    /// Cache keys with a prefetch currently in flight, so concurrent searches for the
+    /// Cache keys with a prefetch currently in flight, so concurrent prefetches for the
     /// same page don't stampede the provider. Static because the typed client is
     /// transient while the warmed <see cref="IMemoryCache"/> is a singleton.
     /// </summary>

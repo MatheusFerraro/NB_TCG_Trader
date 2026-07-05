@@ -384,4 +384,27 @@ public class PokemonTcgCatalogClientTests
                 provider.GetRequiredService<IOptions<CatalogOptions>>().Value)
             .Message.ShouldContain("Catalog:PlaceholderImageUrl must be an absolute HTTP(S) URL.");
     }
+
+    [Fact]
+    public void Registration_rejects_attempt_timeout_above_total_timeout()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            ["CardApi:BaseUrl"] = "https://example.test/v2/",
+            ["CardApi:TimeoutSeconds"] = "5",
+            ["CardApi:AttemptTimeoutSeconds"] = "10",
+        };
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddApiCardCatalog(configuration);
+
+        using var provider = services.BuildServiceProvider(validateScopes: true);
+
+        Should.Throw<OptionsValidationException>(() =>
+                provider.GetRequiredService<IOptions<CardCatalogOptions>>().Value)
+            .Message.ShouldContain(
+                "CardApi:AttemptTimeoutSeconds must be less than or equal to CardApi:TimeoutSeconds.");
+    }
 }

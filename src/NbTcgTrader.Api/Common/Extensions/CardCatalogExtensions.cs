@@ -37,6 +37,9 @@ public static class CardCatalogExtensions
                 o => o.AttemptTimeoutSeconds > 0,
                 "CardApi:AttemptTimeoutSeconds must be positive.")
             .Validate(
+                o => o.AttemptTimeoutSeconds <= o.TimeoutSeconds,
+                "CardApi:AttemptTimeoutSeconds must be less than or equal to CardApi:TimeoutSeconds.")
+            .Validate(
                 o => o.MaxPageSize > 0,
                 "CardApi:MaxPageSize must be positive.")
             .ValidateOnStart();
