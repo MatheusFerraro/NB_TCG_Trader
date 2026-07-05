@@ -48,6 +48,21 @@ describe('searchCatalog', () => {
     expect(new Headers(init?.headers).get('Authorization')).toBeNull()
   })
 
+  it('requests the given page for the same filters', async () => {
+    const { searchCatalog, CATALOG_PAGE_SIZE } = await loadApi()
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(200, { items: [], page: 3, pageSize: CATALOG_PAGE_SIZE, totalCount: 55 }),
+    )
+
+    const result = await searchCatalog({ query: 'Pikachu' }, 3)
+
+    expect(result.page).toBe(3)
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toBe(
+      `${API}/catalog/cards?page=3&pageSize=${CATALOG_PAGE_SIZE}&query=Pikachu`,
+    )
+  })
+
   it('combines name, set, and number filters', async () => {
     const { searchCatalog, CATALOG_PAGE_SIZE } = await loadApi()
     fetchMock.mockResolvedValueOnce(

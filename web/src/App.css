@@ -315,49 +315,145 @@
   padding: 0.4rem 1rem;
 }
 
+/* --- Shared labelled-field structure (label + optional help + control) --- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.field-label .optional {
+  font-weight: 400;
+  color: var(--text);
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 0.5rem 0.65rem;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.field-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  align-self: end;
+  padding-bottom: 0.4rem;
+}
+
+.field-check label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+/* --- "?" help popover --- */
+
+.field-help {
+  position: relative;
+  display: inline-flex;
+}
+
+.field-help-trigger {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.field-help-trigger:hover,
+.field-help-trigger[aria-expanded='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.field-help-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.field-help-pop {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 15rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--text-h);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Catalog search form --- */
+
 .catalog-search {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
-}
-
-.catalog-search label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.catalog-search input {
-  padding: 0.45rem 0.6rem;
-  font: inherit;
-  color: var(--text-h);
-  background: var(--bg);
+  padding: 1rem;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
+  border-radius: 0.75rem;
 }
 
-.catalog-search input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+.catalog-search-name {
+  flex: 1 1 16rem;
 }
 
-.catalog-search button {
-  padding: 0.5rem 1.2rem;
+.catalog-search button[type='submit'] {
+  padding: 0.55rem 1.4rem;
   font: inherit;
   font-weight: 600;
   color: var(--accent-contrast);
   background: var(--accent);
   border: none;
-  border-radius: 0.4rem;
+  border-radius: 0.5rem;
   cursor: pointer;
 }
 
-.catalog-search button:disabled {
+.catalog-search button[type='submit']:disabled {
   opacity: 0.6;
   cursor: default;
 }
@@ -367,39 +463,75 @@
   font-size: 0.9rem;
 }
 
+/* --- Search results grid (Scrydex-style card tiles) --- */
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+  gap: 1.25rem;
+}
+
 .catalog-result {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.75rem;
+  gap: 0;
+  padding: 0;
   font: inherit;
   text-align: left;
   color: inherit;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: 0.85rem;
+  overflow: hidden;
   cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 
 .catalog-result img {
   width: 100%;
   aspect-ratio: 63 / 88;
   object-fit: contain;
-  border-radius: 0.4rem;
   background: var(--bg);
+  padding: 0.5rem;
+  box-sizing: border-box;
 }
 
-.catalog-result h3 {
-  margin: 0;
-  font-size: 1rem;
+.catalog-result-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.6rem 0.75rem 0.75rem;
 }
 
-.catalog-result p {
-  margin: 0;
+.catalog-result-name {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.catalog-result-meta {
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.rarity-chip {
+  padding: 0.1rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-h);
+  background: var(--border);
+  border-radius: 999px;
 }
 
 .catalog-result:hover {
   border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.catalog-result:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .catalog-result.selected {
@@ -408,7 +540,14 @@
   outline-offset: 1px;
 }
 
+.catalog-result.selected .catalog-result-name {
+  color: var(--accent);
+}
+
+/* --- Add-card details panel --- */
+
 .add-card-details {
+  scroll-margin-top: 1rem;
   margin-top: 1.5rem;
   padding: 1.5rem;
   background: var(--surface);
@@ -429,39 +568,6 @@
   grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: 0.75rem;
   align-items: end;
-}
-
-.add-card-fields label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.add-card-fields input,
-.add-card-fields select,
-.add-card-fields textarea {
-  padding: 0.45rem 0.6rem;
-  font: inherit;
-  color: var(--text-h);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-}
-
-.add-card-fields input:focus,
-.add-card-fields select:focus,
-.add-card-fields textarea:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.add-card-fields .binder-card-check {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.4rem;
 }
 
 .add-card-notes {
