@@ -137,6 +137,20 @@ describe('refreshSession', () => {
     expect(getRefreshToken()).toBeNull()
   })
 
+  it('notifies listeners when the refresh token is rejected', async () => {
+    const { refreshSession, setTokens, onAuthFailure } = await loadClient()
+    const listener = vi.fn()
+    setTokens('access-1', 'refresh-1')
+    onAuthFailure(listener)
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(401, { title: 'Authentication failed', status: 401 }),
+    )
+
+    await refreshSession()
+
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+
   it('returns null without a network call when no refresh token is stored', async () => {
     const { refreshSession } = await loadClient()
 

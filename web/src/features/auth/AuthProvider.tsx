@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { refreshSession } from '../../lib/apiClient'
+import { onAuthFailure, refreshSession } from '../../lib/apiClient'
 import * as authApi from './authApi'
 import { AuthContext } from './authContext'
 import type { AuthStatus } from './authContext'
@@ -22,6 +22,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false
+    const unsubscribe = onAuthFailure(() => {
+      setState({ status: 'anonymous', user: null })
+    })
+
     refreshSession()
       .then((auth) => {
         if (!cancelled) {
@@ -35,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
     return () => {
       cancelled = true
+      unsubscribe()
     }
   }, [])
 

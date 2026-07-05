@@ -11,8 +11,8 @@ export function AppShell() {
     // sync priority would re-render the still-mounted ProtectedRoute as
     // anonymous first, and its /login redirect would beat navigate('/').
     // Putting logout in the same transition lane commits both together.
-    navigate('/', { replace: true })
     startTransition(() => {
+      navigate('/', { replace: true })
       logout()
     })
   }

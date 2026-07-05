@@ -45,6 +45,20 @@ async function parseProblem(response: Response): Promise<ProblemDetails | null> 
  * /auth/refresh with the same token would be rejected and kill the session.
  */
 let refreshPromise: Promise<AuthResponse | null> | null = null
+const authFailureListeners = new Set<() => void>()
+
+export function onAuthFailure(listener: () => void): () => void {
+  authFailureListeners.add(listener)
+  return () => {
+    authFailureListeners.delete(listener)
+  }
+}
+
+function notifyAuthFailure(): void {
+  for (const listener of authFailureListeners) {
+    listener()
+  }
+}
 
 export function refreshSession(): Promise<AuthResponse | null> {
   refreshPromise ??= doRefresh().finally(() => {
@@ -67,6 +81,7 @@ async function doRefresh(): Promise<AuthResponse | null> {
 
   if (!response.ok) {
     clearTokens()
+    notifyAuthFailure()
     return null
   }
 
