@@ -71,7 +71,7 @@ export function BinderItemCard({ item, onSaved }: BinderItemCardProps) {
       )}
 
       {editing && (
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit}>
           <label>
             Quantity
             <input

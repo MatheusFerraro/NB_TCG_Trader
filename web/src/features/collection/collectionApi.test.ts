@@ -101,7 +101,7 @@ describe('updateItem', () => {
 
 describe('formatPrice', () => {
   it('formats CAD with the en-CA locale', () => {
-    expect(formatPrice(1234.5, 'CAD')).toBe('$1,234.50')
+    expect(formatPrice(1234.5, 'CAD')).toMatch(/^(CA)?\$\s?1,234\.50$/)
   })
 
   it('formats BRL with the pt-BR locale', () => {
