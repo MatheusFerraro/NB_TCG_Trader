@@ -143,3 +143,186 @@
   border-radius: 0.4rem;
   color: var(--danger);
 }
+
+.binder-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.binder-count {
+  color: var(--text);
+}
+
+.binder-empty {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+.binder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+
+.binder-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.binder-card img {
+  width: 100%;
+  aspect-ratio: 63 / 88; /* physical TCG card proportions */
+  object-fit: contain;
+  border-radius: 0.4rem;
+  background: var(--bg);
+}
+
+.binder-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.binder-card-set {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.binder-card-facts {
+  display: flex;
+  gap: 0.6rem;
+  margin: 0;
+  color: var(--text-h);
+}
+
+.binder-card-badges {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0;
+  min-height: 1.4rem;
+}
+
+.badge {
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+.badge-sale {
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+
+.badge-private {
+  color: var(--text-h);
+  background: var(--border);
+}
+
+.binder-card-edit {
+  align-self: flex-start;
+  padding: 0.3rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text-h);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.binder-card-edit:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.binder-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.binder-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.binder-card-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.binder-card input,
+.binder-card select,
+.binder-card textarea {
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+
+.binder-card input:focus,
+.binder-card select:focus,
+.binder-card textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.binder-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.binder-card-actions button[type='submit'] {
+  padding: 0.4rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border: none;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.binder-card-actions button[type='submit']:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.pager button {
+  padding: 0.4rem 1rem;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+
+.pager button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
