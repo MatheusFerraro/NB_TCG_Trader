@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ApiError } from '../lib/apiClient'
 import { BinderItemCard } from '../features/collection/BinderItemCard'
+import { ManageItemDialog } from '../features/collection/ManageItemDialog'
 import { getBinder } from '../features/collection/collectionApi'
 import type { CollectionItem, Page } from '../features/collection/types'
 
@@ -12,10 +13,11 @@ interface BinderResult {
   error: string | null
 }
 
-/** Card-grid binder view (BACKLOG #20). */
+/** Card-grid binder view (BACKLOG #20); items open the manage dialog (#47). */
 export function BinderPage() {
   const [page, setPage] = useState(1)
   const [result, setResult] = useState<BinderResult | null>(null)
+  const [managing, setManaging] = useState<CollectionItem | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -48,6 +50,28 @@ export function BinderPage() {
             data: {
               ...prev.data,
               items: prev.data.items.map((item) => (item.id === updated.id ? updated : item)),
+            },
+          }
+        : prev,
+    )
+  }
+
+  function handleDeleted(id: number) {
+    setManaging(null)
+    const remaining = (result?.data?.items.length ?? 0) - 1
+    if (remaining === 0 && page > 1) {
+      // Deleting the page's last item: step back and let the effect refetch.
+      setPage(page - 1)
+      return
+    }
+    setResult((prev) =>
+      prev?.data
+        ? {
+            ...prev,
+            data: {
+              ...prev.data,
+              items: prev.data.items.filter((item) => item.id !== id),
+              totalCount: Math.max(0, prev.data.totalCount - 1),
             },
           }
         : prev,
@@ -89,7 +113,7 @@ export function BinderPage() {
         <>
           <div className="binder-grid">
             {data.items.map((item) => (
-              <BinderItemCard key={item.id} item={item} onSaved={handleSaved} />
+              <BinderItemCard key={item.id} item={item} onManage={setManaging} />
             ))}
           </div>
           {totalPages > 1 && (
@@ -110,6 +134,16 @@ export function BinderPage() {
             </nav>
           )}
         </>
+      )}
+
+      {managing && (
+        <ManageItemDialog
+          key={managing.id}
+          item={managing}
+          onSaved={handleSaved}
+          onDeleted={handleDeleted}
+          onClose={() => setManaging(null)}
+        />
       )}
     </section>
   )
