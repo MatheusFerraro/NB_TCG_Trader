@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { draftFrom, toUpdateRequest } from './draft'
+import { draftFrom, emptyDraft, needsDetailsUpdate, toUpdateRequest, validateDraft } from './draft'
 import type { CollectionItem } from './types'
 
 const item: CollectionItem = {
@@ -52,5 +52,42 @@ describe('draftFrom / toUpdateRequest', () => {
 
     expect(draft.price).toBe('')
     expect(draft.notes).toBe('')
+  })
+})
+
+describe('validateDraft', () => {
+  it('accepts the add-flow defaults', () => {
+    expect(validateDraft(emptyDraft())).toEqual([])
+  })
+
+  it('rejects a for-sale draft without a price', () => {
+    const draft = { ...emptyDraft(), isForSale: true }
+
+    expect(validateDraft(draft)).toEqual(['Price is required when the item is for sale.'])
+  })
+
+  it('rejects out-of-range and non-integer quantities', () => {
+    expect(validateDraft({ ...emptyDraft(), quantity: '0' })).toEqual([
+      'Quantity must be between 1 and 999.',
+    ])
+    expect(validateDraft({ ...emptyDraft(), quantity: '2.5' })).toEqual([
+      'Quantity must be between 1 and 999.',
+    ])
+  })
+})
+
+describe('needsDetailsUpdate', () => {
+  it('is false for the POST-compatible defaults', () => {
+    expect(needsDetailsUpdate(emptyDraft())).toBe(false)
+  })
+
+  it.each([
+    { name: 'for sale', patch: { isForSale: true } },
+    { name: 'private', patch: { isPrivate: true } },
+    { name: 'price', patch: { price: '9.99' } },
+    { name: 'currency', patch: { currency: 'BRL' as const } },
+    { name: 'notes', patch: { notes: 'trade binder' } },
+  ])('is true when $name is set', ({ patch }) => {
+    expect(needsDetailsUpdate({ ...emptyDraft(), ...patch })).toBe(true)
   })
 })

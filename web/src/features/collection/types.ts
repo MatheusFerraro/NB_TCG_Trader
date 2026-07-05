@@ -41,6 +41,17 @@ export interface Page<T> {
 }
 
 /**
+ * POST /collection/items body. The card is identified by the provider id the
+ * catalog search returns; sale/private/price/notes are not accepted here — set
+ * them with a follow-up PUT.
+ */
+export interface AddCardRequest {
+  cardExternalId: string
+  quantity: number
+  condition: CardCondition
+}
+
+/**
  * PUT /collection/items/{id} body. Full-replacement semantics: every field is
  * the complete desired state, so the edit form must send notes/price back even
  * when untouched or the server clears them.

@@ -3,6 +3,7 @@ import { AppShell } from './AppShell'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { LoginPage } from './features/auth/LoginPage'
 import { RegisterPage } from './features/auth/RegisterPage'
+import { AddCardPage } from './pages/AddCardPage'
 import { BinderPage } from './pages/BinderPage'
 import { HomePage } from './pages/HomePage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -20,6 +21,7 @@ function App() {
             <Route path="register" element={<RegisterPage />} />
             <Route element={<ProtectedRoute />}>
               <Route path="binder" element={<BinderPage />} />
+              <Route path="binder/add" element={<AddCardPage />} />
             </Route>
             <Route path="*" element={<NotFoundPage />} />
           </Route>

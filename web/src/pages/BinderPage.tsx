@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ApiError } from '../lib/apiClient'
 import { BinderItemCard } from '../features/collection/BinderItemCard'
 import { getBinder } from '../features/collection/collectionApi'
@@ -62,7 +63,12 @@ export function BinderPage() {
     <section>
       <header className="binder-header">
         <h1>Binder</h1>
-        {data && <span className="binder-count">{data.totalCount} cards</span>}
+        <div className="binder-toolbar">
+          {data && <span className="binder-count">{data.totalCount} cards</span>}
+          <Link to="/binder/add" className="cta">
+            Add card
+          </Link>
+        </div>
       </header>
 
       {current === null && <p className="page-loading">Loading your binder…</p>}
@@ -74,7 +80,8 @@ export function BinderPage() {
 
       {data && data.items.length === 0 && (
         <p className="binder-empty">
-          Your binder is empty. Import a CSV or add cards to see them here.
+          Your binder is empty. <Link to="/binder/add">Add a card</Link> from the catalog now,
+          or import a CSV later.
         </p>
       )}
 
