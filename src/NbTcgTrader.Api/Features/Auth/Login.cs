@@ -48,6 +48,13 @@ public sealed class LoginHandler(UserManager<AppUser> users, TokenIssuer issuer)
 
         await users.ResetAccessFailedCountAsync(user);
 
+        // Activity stamps for the admin hub's operational views. Coarse on purpose —
+        // no per-request tracking, no IPs (privacy-conscious by design).
+        var now = DateTimeOffset.UtcNow;
+        user.LastLoginAt = now;
+        user.LastSeenAt = now;
+        await users.UpdateAsync(user);
+
         var response = await issuer.IssueAsync(user, cancellationToken);
         return Results.Ok(response);
     }

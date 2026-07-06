@@ -47,6 +47,13 @@ public sealed class RefreshHandler(
             return InvalidToken();
         }
 
+        // A locked account must not mint fresh tokens (admin lock, credential
+        // lockout). Same opaque rejection as any other invalid token.
+        if (await users.IsLockedOutAsync(user))
+        {
+            return InvalidToken();
+        }
+
         // Rotation must be single-use and all-or-nothing under concurrency
         // (CLAUDE.md §15). Wrap revoke + issue in one transaction so they commit
         // together or not at all.
@@ -65,6 +72,11 @@ public sealed class RefreshHandler(
         {
             return InvalidToken();
         }
+
+        // Refresh proves the account is still in use — stamp LastSeenAt for the
+        // admin hub's activity view (login keeps LastLoginAt).
+        user.LastSeenAt = now;
+        await users.UpdateAsync(user);
 
         var response = await issuer.IssueAsync(user, cancellationToken);
 

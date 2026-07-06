@@ -53,6 +53,7 @@ public sealed class RegisterHandler(UserManager<AppUser> users, TokenIssuer issu
             ContactEmail = request.ContactEmail,
             DiscordHandle = request.DiscordHandle,
             InstagramHandle = request.InstagramHandle,
+            CreatedAt = DateTimeOffset.UtcNow,
         };
 
         // Identity hashes the password (CLAUDE.md §15) and enforces uniqueness/policy.
