@@ -46,6 +46,7 @@ try
     });
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+    builder.Services.AddApiForwardedHeaders();
     builder.Services.AddApiCors(builder.Configuration);
     builder.Services.AddApiRateLimiting();
 
@@ -85,7 +86,12 @@ try
     // Admin:SeedEmails. No-op (and no DB access) when the variable is unset.
     await app.SeedAdminsAsync();
 
-    // Exception handling first so it wraps everything downstream.
+    // Forwarded headers first: everything downstream (rate limiting, HTTPS
+    // redirection, HSTS, request logs) must see the real client IP and scheme,
+    // not the ingress proxy's (CLAUDE.md §15).
+    app.UseForwardedHeaders();
+
+    // Exception handling next so it wraps everything downstream.
     app.UseExceptionHandler();
     app.UseStatusCodePages();
 
