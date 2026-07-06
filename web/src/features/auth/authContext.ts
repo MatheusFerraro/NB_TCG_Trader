@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { LoginRequest, RegisterRequest, User } from './types'
+import type { LoginRequest, RegisterRequest, UpdateProfileRequest, User } from './types'
 
 export type AuthStatus = 'loading' | 'anonymous' | 'authenticated'
 
@@ -8,6 +8,8 @@ export interface AuthContextValue {
   user: User | null
   login: (request: LoginRequest) => Promise<void>
   register: (request: RegisterRequest) => Promise<void>
+  /** PUT /auth/me; on success the context user reflects the saved profile. */
+  updateProfile: (request: UpdateProfileRequest) => Promise<void>
   logout: () => void
 }
 

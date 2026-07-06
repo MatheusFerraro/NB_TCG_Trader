@@ -24,6 +24,20 @@ export interface LoginRequest {
   password: string
 }
 
+/**
+ * PUT /auth/me body (UpdateProfile.cs). PUT semantics: every optional field is
+ * the complete desired state — null clears it, so the form must always send
+ * all fields. Account email/password are deliberately not editable here.
+ */
+export interface UpdateProfileRequest {
+  displayName: string
+  city: string | null
+  country: string | null
+  contactEmail: string | null
+  discordHandle: string | null
+  instagramHandle: string | null
+}
+
 export interface RegisterRequest {
   email: string
   password: string
