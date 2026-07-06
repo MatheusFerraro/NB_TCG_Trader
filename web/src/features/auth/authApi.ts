@@ -1,6 +1,12 @@
 import { apiFetch } from '../../lib/apiClient'
 import { clearTokens, setTokens } from '../../lib/tokenStore'
-import type { AuthResponse, LoginRequest, RegisterRequest, User } from './types'
+import type {
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  UpdateProfileRequest,
+  User,
+} from './types'
 
 export async function login(request: LoginRequest): Promise<User> {
   const auth = await apiFetch<AuthResponse>('/auth/login', {
@@ -20,6 +26,11 @@ export async function register(request: RegisterRequest): Promise<User> {
   })
   setTokens(auth.accessToken, auth.refreshToken)
   return auth.user
+}
+
+/** Replaces the public profile; returns the updated user (same shape as /auth/me). */
+export function updateProfile(request: UpdateProfileRequest): Promise<User> {
+  return apiFetch<User>('/auth/me', { method: 'PUT', body: request })
 }
 
 /**

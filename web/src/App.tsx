@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './AppShell'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { LoginPage } from './features/auth/LoginPage'
+import { ProfilePage } from './features/auth/ProfilePage'
 import { RegisterPage } from './features/auth/RegisterPage'
 import { AddCardPage } from './pages/AddCardPage'
 import { BinderPage } from './pages/BinderPage'
@@ -31,6 +32,7 @@ function App() {
               <Route path="binder/add" element={<AddCardPage />} />
               <Route path="binder/import" element={<ImportPage />} />
               <Route path="binder/import/:jobId" element={<ImportReviewPage />} />
+              <Route path="profile" element={<ProfilePage />} />
             </Route>
             <Route path="*" element={<NotFoundPage />} />
           </Route>

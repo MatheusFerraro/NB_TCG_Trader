@@ -33,7 +33,10 @@ export function AppShell() {
                 Binder
               </NavLink>
               <NavLink to="/binder/import">Import CSV</NavLink>
-              <span className="user-name">{user?.displayName}</span>
+              {/* The signed-in name doubles as the door to profile settings. */}
+              <NavLink to="/profile" className="user-name" title="Profile settings">
+                {user?.displayName}
+              </NavLink>
               <button type="button" className="link-button" onClick={handleLogout}>
                 Sign out
               </button>

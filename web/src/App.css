@@ -144,6 +144,20 @@
   color: var(--danger);
 }
 
+.form-success {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 0.4rem;
+  color: var(--text-h);
+}
+
+.profile-intro {
+  margin-top: 0;
+  color: var(--text);
+}
+
 .binder-header {
   display: flex;
   align-items: baseline;
