@@ -23,7 +23,7 @@ public sealed record RefreshTokenPair(string Value, string Hash, DateTimeOffset 
 /// </summary>
 public interface ITokenService
 {
-    AccessToken CreateAccessToken(AppUser user);
+    AccessToken CreateAccessToken(AppUser user, IEnumerable<string> roles);
 
     RefreshTokenPair CreateRefreshToken();
 
@@ -35,7 +35,7 @@ public sealed class TokenService(IOptions<JwtOptions> options) : ITokenService
 {
     private readonly JwtOptions _options = options.Value;
 
-    public AccessToken CreateAccessToken(AppUser user)
+    public AccessToken CreateAccessToken(AppUser user, IEnumerable<string> roles)
     {
         var now = DateTimeOffset.UtcNow;
         var expiresAt = now.AddMinutes(_options.AccessTokenMinutes);
@@ -44,7 +44,8 @@ public sealed class TokenService(IOptions<JwtOptions> options) : ITokenService
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         // sub/jti are standard; email + name are convenience claims for the client.
-        // No roles or secrets travel in the token.
+        // "role" matches the bearer options' RoleClaimType, so [Authorize] role
+        // policies evaluate straight off the token. No secrets travel in it.
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id),
@@ -52,6 +53,7 @@ public sealed class TokenService(IOptions<JwtOptions> options) : ITokenService
             new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
             new(JwtRegisteredClaimNames.Name, user.DisplayName),
         };
+        claims.AddRange(roles.Select(role => new Claim("role", role)));
 
         var descriptor = new SecurityTokenDescriptor
         {

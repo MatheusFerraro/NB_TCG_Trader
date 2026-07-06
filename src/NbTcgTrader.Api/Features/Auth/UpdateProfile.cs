@@ -74,6 +74,6 @@ public sealed class UpdateProfileHandler(UserManager<AppUser> users)
         }
 
         // The same shape /auth/me returns, so the client can refresh its view.
-        return Results.Ok(UserResponse.From(user));
+        return Results.Ok(UserResponse.From(user, await users.GetRolesAsync(user)));
     }
 }

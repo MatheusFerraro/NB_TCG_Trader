@@ -15,6 +15,12 @@ namespace NbTcgTrader.Api.Common.Extensions;
 /// </summary>
 public static class AuthenticationExtensions
 {
+    /// <summary>Identity role name for trusted operators (admin hub).</summary>
+    public const string AdminRole = "Admin";
+
+    /// <summary>Authorization policy requiring the <see cref="AdminRole"/> role.</summary>
+    public const string AdminPolicy = "AdminOnly";
+
     public static IServiceCollection AddApiAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -64,7 +70,10 @@ public static class AuthenticationExtensions
                 };
             });
 
-        services.AddAuthorization();
+        // Admin-only surface: the role claim ("role") is minted into the JWT by
+        // TokenService, so the policy evaluates without a database round-trip.
+        services.AddAuthorization(options =>
+            options.AddPolicy(AdminPolicy, policy => policy.RequireRole(AdminRole)));
 
         // Auth-slice services: token minting, rotation, and the endpoint handlers.
         services.AddSingleton<ITokenService, TokenService>();

@@ -22,9 +22,10 @@ public sealed record UserResponse(
     string? Country,
     string? ContactEmail,
     string? DiscordHandle,
-    string? InstagramHandle)
+    string? InstagramHandle,
+    IReadOnlyList<string> Roles)
 {
-    public static UserResponse From(AppUser user) => new(
+    public static UserResponse From(AppUser user, IEnumerable<string> roles) => new(
         user.Id,
         user.Email ?? string.Empty,
         user.DisplayName,
@@ -32,5 +33,6 @@ public sealed record UserResponse(
         user.Country,
         user.ContactEmail,
         user.DiscordHandle,
-        user.InstagramHandle);
+        user.InstagramHandle,
+        roles.ToArray());
 }

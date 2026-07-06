@@ -25,6 +25,6 @@ public sealed class MeHandler(UserManager<AppUser> users)
             return Results.Unauthorized();
         }
 
-        return Results.Ok(UserResponse.From(user));
+        return Results.Ok(UserResponse.From(user, await users.GetRolesAsync(user)));
     }
 }
