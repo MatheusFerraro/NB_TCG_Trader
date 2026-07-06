@@ -92,6 +92,13 @@ export function ListingDetailPage() {
   const hasContact = Boolean(
     seller.contactEmail || seller.discordHandle || seller.instagramHandle,
   )
+  const mailtoHref = seller.contactEmail
+    ? `mailto:${encodeURIComponent(seller.contactEmail)}`
+    : null
+  const instagramHandle = seller.instagramHandle?.replace(/^@/, '')
+  const instagramHref = instagramHandle
+    ? `https://instagram.com/${encodeURIComponent(instagramHandle)}`
+    : null
 
   return (
     <section>
@@ -151,10 +158,10 @@ export function ListingDetailPage() {
             <h3>Contact seller</h3>
             {hasContact ? (
               <ul className="listing-contact">
-                {seller.contactEmail && (
+                {seller.contactEmail && mailtoHref && (
                   <li>
                     <span className="listing-contact-label">Email</span>
-                    <a href={`mailto:${seller.contactEmail}`}>{seller.contactEmail}</a>
+                    <a href={mailtoHref}>{seller.contactEmail}</a>
                   </li>
                 )}
                 {seller.discordHandle && (
@@ -163,13 +170,13 @@ export function ListingDetailPage() {
                     <span>{seller.discordHandle}</span>
                   </li>
                 )}
-                {seller.instagramHandle && (
+                {seller.instagramHandle && instagramHref && (
                   <li>
                     <span className="listing-contact-label">Instagram</span>
                     <a
-                      href={`https://instagram.com/${seller.instagramHandle.replace(/^@/, '')}`}
+                      href={instagramHref}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                     >
                       {seller.instagramHandle}
                     </a>
