@@ -230,6 +230,10 @@ card_name, set, card_number, quantity, condition, price, for_sale
 - **Errors:** central exception handling → ProblemDetails (`application/problem+json`).
   No raw stack traces to clients.
 - **Rate limiting:** built-in ASP.NET Core limiter on auth and import endpoints.
+- **Forwarded headers:** always on, first in the pipeline; trusts exactly one
+  proxy hop (`ForwardLimit = 1`, known-proxy lists cleared) so the hosted
+  ingress (ACA/Fly/Render) supplies the client IP/scheme and clients cannot
+  spoof rate-limit partitions.
 - **API docs:** Scalar UI over the OpenAPI document (Swashbuckle is no longer in
   the default template).
 - **Config/secrets:** connection string, JWT signing key, and card-API key come
@@ -243,6 +247,12 @@ card_name, set, card_number, quantity, condition, price, for_sale
 - xUnit + Shouldly.
 - Prioritize: import matching logic, validators, and marketplace query filters.
 - Handler tests use an in-memory or test Postgres; keep them fast and isolated.
+- Docker-dependent (Testcontainers) test classes carry
+  `[Trait("Category", "Integration")]`; the fast suite is
+  `dotnet test --filter "Category!=Integration"`. CI runs both as separate jobs.
+- Test host factories must pin `Admin:SeedEmails` empty when their database is
+  unreachable — Development hosts load the developer's user-secrets, and a
+  configured seed email would make startup query the database and kill the boot.
 - A test is meaningful only if it can fail for a real reason — no assertion-free
   tests.
 

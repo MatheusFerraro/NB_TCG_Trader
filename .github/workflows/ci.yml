@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+    branches: [master, dev]
+
+jobs:
+  # Fast feedback: compile with warnings-as-errors and run every test that does
+  # not need Docker (validators, handlers, in-process API hosts). Finishes in
+  # seconds so PRs get a quick signal.
+  api-unit:
+    name: API build + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore
+      - name: Build (warnings as errors)
+        run: dotnet build --no-restore --configuration Release -warnaserror
+      - name: Test (fast suite)
+        run: >-
+          dotnet test --no-build --configuration Release
+          --filter "Category!=Integration"
+
+  # High-fidelity suite: Testcontainers spins up real Postgres instances on the
+  # runner's Docker daemon and exercises the API end-to-end (auth, collection,
+  # import, marketplace, admin, migrations).
+  api-integration:
+    name: API integration tests (Testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Restore
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+      - name: Test (integration suite)
+        run: >-
+          dotnet test --no-build --configuration Release
+          --filter "Category=Integration"
+
+  web:
+    name: Web lint + tests + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build

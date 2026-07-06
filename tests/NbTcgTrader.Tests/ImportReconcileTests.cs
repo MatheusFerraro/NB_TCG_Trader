@@ -25,6 +25,7 @@ namespace NbTcgTrader.Tests;
 // Also covers owner-scoping (404) and re-reconciling a decided row (409). Skips cleanly
 // when Docker is unavailable. Each test gets its own host (own rate-limit bucket) and user.
 [Collection(IntegrationTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class ImportReconcileTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

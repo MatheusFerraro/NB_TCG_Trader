@@ -20,6 +20,7 @@ namespace NbTcgTrader.Tests;
 // results page. Browsing is anonymous. Skips cleanly when Docker is unavailable. Each
 // test gets its own host (own rate-limit bucket) and users.
 [Collection(IntegrationTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class MarketplaceEndpointsTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

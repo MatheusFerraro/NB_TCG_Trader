@@ -9,6 +9,7 @@ namespace NbTcgTrader.Tests;
 // High-fidelity check: apply the InitialCreate migration against a real Postgres
 // (via Testcontainers) and confirm the schema lands. Requires Docker; when it's
 // unavailable the test skips cleanly rather than failing the suite.
+[Trait("Category", "Integration")]
 public sealed class DatabaseMigrationTests : IAsyncLifetime
 {
     private PostgreSqlContainer? _postgres;

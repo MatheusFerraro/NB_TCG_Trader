@@ -23,6 +23,7 @@ namespace NbTcgTrader.Tests;
 // failures to ProblemDetails. Skips cleanly when Docker is unavailable. Each test gets
 // its own host (own rate-limit bucket) and user.
 [Collection(IntegrationTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class CollectionEndpointsTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

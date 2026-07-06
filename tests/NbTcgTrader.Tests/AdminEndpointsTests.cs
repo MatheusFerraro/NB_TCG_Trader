@@ -23,6 +23,7 @@ namespace NbTcgTrader.Tests;
 // the audit log. Skips cleanly when Docker is unavailable. Each test gets its own host
 // (own rate-limit bucket) and users.
 [Collection(IntegrationTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class AdminEndpointsTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

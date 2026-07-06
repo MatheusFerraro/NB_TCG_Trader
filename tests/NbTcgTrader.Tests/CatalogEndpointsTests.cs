@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using NbTcgTrader.Api.Common.Extensions;
 using NbTcgTrader.Api.Features.Catalog;
 using Shouldly;
 
@@ -114,6 +115,10 @@ public sealed class CatalogEndpointsTests
             builder.UseSetting("Jwt:Issuer", TestJwt.Issuer);
             builder.UseSetting("Jwt:Audience", TestJwt.Audience);
             builder.UseSetting("Catalog:PlaceholderImageUrl", Placeholder);
+
+            // Developer user-secrets may set Admin:SeedEmails; pin it empty so the
+            // admin seed doesn't reach for the (unreachable) database on boot.
+            builder.UseSetting(AdminSeedExtensions.SeedEmailsKey, "");
 
             builder.ConfigureTestServices(services =>
             {

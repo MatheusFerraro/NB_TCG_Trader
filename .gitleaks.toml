@@ -1,0 +1,20 @@
+# Gitleaks configuration for repository secret scans (see README → Security).
+# Run the full-history scan with:
+#   docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest git /repo --no-banner --redact
+#
+# The allowlist below covers the two known, deliberate non-secrets in history so
+# a clean scan means "no findings". Anything new that gitleaks reports must be
+# treated as a real leak until proven otherwise.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known test-only values that pattern-match as secrets but sign/protect nothing outside local test hosts"
+paths = [
+  # Throwaway JWT signing key used only by in-process integration test servers
+  # (never a deployed key; production keys come from environment variables).
+  '''tests/NbTcgTrader.Tests/TestJwt\.cs''',
+  # Local demo credentials documented for the manual verify workflow.
+  '''\.claude/skills/verify/SKILL\.md''',
+]

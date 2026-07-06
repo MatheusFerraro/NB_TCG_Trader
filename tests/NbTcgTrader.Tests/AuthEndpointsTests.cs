@@ -15,6 +15,7 @@ namespace NbTcgTrader.Tests;
 // when Docker is unavailable. The container is shared; each test gets its own host
 // (so its own auth rate-limit bucket) and a unique email to stay isolated.
 [Collection(IntegrationTestCollection.Name)]
+[Trait("Category", "Integration")]
 public sealed class AuthEndpointsTests : IAsyncLifetime
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
