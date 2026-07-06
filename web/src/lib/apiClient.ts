@@ -105,7 +105,7 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
  */
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { body, auth = true, headers, ...init } = options
-  const isFormData = body instanceof FormData
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
 
   const doFetch = () => {
     const requestHeaders = new Headers(headers)

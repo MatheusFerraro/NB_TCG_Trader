@@ -9,7 +9,7 @@ import type {
 /** GET /import/template is anonymous static content — a plain link downloads it. */
 export const importTemplateUrl = `${API_URL}/import/template`
 
-/** Extensions the API accepts; checked client-side for a friendlier early error. */
+/** Extensions that the API accepts; checked client-side for a friendlier early error. */
 export const IMPORT_EXTENSIONS = ['.csv', '.xlsx'] as const
 
 export function hasImportExtension(fileName: string): boolean {
