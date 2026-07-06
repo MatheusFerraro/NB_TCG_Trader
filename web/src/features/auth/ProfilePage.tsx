@@ -21,6 +21,11 @@ export function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  function handleFieldChange(setValue: (value: string) => void, value: string) {
+    setValue(value)
+    setSaved(false)
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setErrors([])
@@ -55,12 +60,12 @@ export function ProfilePage() {
         Buyers see these details on your marketplace listings. Share at least one
         contact channel so they can actually reach you.
       </p>
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit}>
         <label>
           Display name
           <input
             value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
+            onChange={(e) => handleFieldChange(setDisplayName, e.target.value)}
             autoComplete="nickname"
             required
           />
@@ -69,7 +74,7 @@ export function ProfilePage() {
           City <span className="optional">(optional)</span>
           <input
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={(e) => handleFieldChange(setCity, e.target.value)}
             autoComplete="address-level2"
             placeholder="Moncton, Ipaussu…"
           />
@@ -78,7 +83,7 @@ export function ProfilePage() {
           Country <span className="optional">(optional)</span>
           <input
             value={country}
-            onChange={(e) => setCountry(e.target.value)}
+            onChange={(e) => handleFieldChange(setCountry, e.target.value)}
             autoComplete="country-name"
           />
         </label>
@@ -87,7 +92,7 @@ export function ProfilePage() {
           <input
             type="email"
             value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
+            onChange={(e) => handleFieldChange(setContactEmail, e.target.value)}
             autoComplete="email"
             placeholder="where buyers can email you"
           />
@@ -97,7 +102,7 @@ export function ProfilePage() {
           Discord handle <span className="optional">(optional)</span>
           <input
             value={discordHandle}
-            onChange={(e) => setDiscordHandle(e.target.value)}
+            onChange={(e) => handleFieldChange(setDiscordHandle, e.target.value)}
             placeholder="e.g. alice#1234"
           />
         </label>
@@ -105,14 +110,14 @@ export function ProfilePage() {
           Instagram handle <span className="optional">(optional)</span>
           <input
             value={instagramHandle}
-            onChange={(e) => setInstagramHandle(e.target.value)}
+            onChange={(e) => handleFieldChange(setInstagramHandle, e.target.value)}
             placeholder="e.g. @alicecards"
           />
         </label>
         {errors.length > 0 && (
           <ul className="form-errors" role="alert">
-            {errors.map((error) => (
-              <li key={error}>{error}</li>
+            {errors.map((error, index) => (
+              <li key={`${error}-${index}`}>{error}</li>
             ))}
           </ul>
         )}
