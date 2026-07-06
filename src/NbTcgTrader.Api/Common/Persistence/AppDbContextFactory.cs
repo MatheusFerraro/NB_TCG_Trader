@@ -6,9 +6,9 @@ namespace NbTcgTrader.Api.Common.Persistence;
 /// <summary>
 /// Design-time factory so <c>dotnet ef</c> can build the context without booting
 /// the web host. Migration generation needs a provider + connection string but no
-/// live database. Prefers the <c>ConnectionStrings__Default</c> environment
-/// variable, falling back to the local dev defaults already published in
-/// <c>docker-compose.yml</c>/<c>.env.example</c> (non-secret).
+/// live database. Resolves <c>ConnectionStrings:Default</c> from user-secrets,
+/// then environment variables (env wins), falling back to the local dev defaults
+/// already published in <c>docker-compose.yml</c>/<c>.env.example</c> (non-secret).
 /// </summary>
 public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
 {
@@ -17,9 +17,17 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
 
     public AppDbContext CreateDbContext(string[] args)
     {
-        var connectionString =
-            Environment.GetEnvironmentVariable("ConnectionStrings__Default")
-            ?? LocalDevConnectionString;
+        var configuration = new ConfigurationBuilder()
+            .AddUserSecrets<AppDbContextFactory>(optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+
+        var connectionString = configuration.GetConnectionString("Default");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = LocalDevConnectionString;
+        }
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(connectionString)
