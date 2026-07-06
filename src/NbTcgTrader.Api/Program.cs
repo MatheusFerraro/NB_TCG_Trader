@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json.Serialization;
 using NbTcgTrader.Api.Common.Errors;
 using NbTcgTrader.Api.Common.Extensions;
+using NbTcgTrader.Api.Features.Admin;
 using NbTcgTrader.Api.Features.Auth;
 using NbTcgTrader.Api.Features.Catalog;
 using NbTcgTrader.Api.Features.Collection;
@@ -66,6 +67,9 @@ try
     // Marketplace slice: browse/search public listings (#17).
     builder.Services.AddApiMarketplace();
 
+    // Admin hub slice: user management, lock/unlock, audit log, activity views.
+    builder.Services.AddApiAdmin();
+
     var app = builder.Build();
 
     // Apply migrations on startup in Development only, and only when enabled.
@@ -76,6 +80,10 @@ try
     {
         await app.ApplyMigrationsAsync();
     }
+
+    // First-admin bootstrap: grants the Admin role to accounts listed in
+    // Admin:SeedEmails. No-op (and no DB access) when the variable is unset.
+    await app.SeedAdminsAsync();
 
     // Exception handling first so it wraps everything downstream.
     app.UseExceptionHandler();
@@ -109,6 +117,7 @@ try
     app.MapGet("/health", () => Results.Ok(new { status = "ok" }))
         .WithName("HealthCheck");
 
+    app.MapAdminEndpoints();
     app.MapAuthEndpoints();
     app.MapCatalogEndpoints();
     app.MapCollectionEndpoints();
