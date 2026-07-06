@@ -24,6 +24,8 @@ export function AppShell() {
           NB TCG Trader
         </Link>
         <nav>
+          {/* Public surface: visible signed in or not. */}
+          <NavLink to="/marketplace">Marketplace</NavLink>
           {status === 'authenticated' && (
             <>
               {/* end: /binder/import is a child path and would highlight both links. */}
