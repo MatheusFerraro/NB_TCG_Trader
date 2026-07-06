@@ -23,6 +23,18 @@ public sealed class AppUser : IdentityUser
 
     public string? InstagramHandle { get; set; }
 
+    /// <summary>Account creation instant, for operational views (admin hub).</summary>
+    public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>Last successful password sign-in. Null until the first login.</summary>
+    public DateTimeOffset? LastLoginAt { get; set; }
+
+    /// <summary>
+    /// Last authenticated activity (login or token refresh). Coarse on purpose —
+    /// enough for "is this account active?" without tracking individual requests.
+    /// </summary>
+    public DateTimeOffset? LastSeenAt { get; set; }
+
     public ICollection<CollectionItem> CollectionItems { get; set; } = new List<CollectionItem>();
 
     public ICollection<ImportJob> ImportJobs { get; set; } = new List<ImportJob>();
