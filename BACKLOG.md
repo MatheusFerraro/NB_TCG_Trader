@@ -165,6 +165,26 @@ Search/filter UI; listing page with "contact seller" revealing handles.
 
 ---
 
+## Epic: Admin / operations (`epic`, `admin`, `phase-1`)
+
+**#27 Admin hub: role, user management, lock/unlock, audit log, activity**
+Admin role (ASP.NET Core Identity roles) + protected `/admin` API surface and
+React admin hub. First-admin bootstrap via `Admin__SeedEmails` env var
+(idempotent startup seeding; accounts must already exist). Endpoints: dashboard
+counts, user list (search/city/country/locked filters), user detail (contact
+fields as present/absent flags only), lock (reason required, revokes refresh
+tokens, blocks sign-in/refresh) / unlock, immutable `AdminAuditLog`
+(lock/unlock/detail-view, correlation ids), activity view derived from existing
+data (`CreatedAt`/`LastLoginAt`/`LastSeenAt`, failed-attempt counters, failed
+imports) — no per-request tracking, no IPs.
+- AC: admin endpoints enforce the Admin role policy (401 anon / 403 non-admin);
+  lock requires a reason, blocks sign-in and refresh, and is audited; admins
+  cannot lock themselves or other admins; contact handle values never appear in
+  admin responses.
+- Labels: backend, frontend, security, phase-1
+
+---
+
 ## Epic: Deployment (`epic`, `infra`, `phase-1`) — M5
 
 **#23 Provision Supabase Postgres + run migrations**

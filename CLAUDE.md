@@ -151,7 +151,16 @@ EF Core code-first. Names are guidance; adjust as needed but keep the shape.
 
 **AppUser** — extends `IdentityUser`. Adds `DisplayName`, `City` (e.g. "Moncton",
 "Ipaussu"), `Country`, and public contact fields: `ContactEmail?`,
-`DiscordHandle?`, `InstagramHandle?`.
+`DiscordHandle?`, `InstagramHandle?`. Also carries coarse activity stamps for the
+admin hub: `CreatedAt`, `LastLoginAt?`, `LastSeenAt?` (login/refresh only — no
+per-request tracking, no IPs).
+
+**AdminAuditLog** — immutable trail of sensitive admin actions (insert-only, no
+FK to users so rows survive deletions). `Id`, `AdminUserId`, `TargetUserId?`,
+`Action` (enum: UserLocked, UserUnlocked, UserDetailViewed, RoleChanged),
+`Reason?` (required for locks), `CorrelationId?`, `CreatedAt`. The Admin role is
+plain ASP.NET Core Identity roles; first admins are seeded from the
+`Admin__SeedEmails` env var (idempotent, accounts must already exist).
 
 **CollectionItem** — a user owning copies of a card (this is the binder row AND,
 when flagged, the listing). `Id`, `UserId`, `CardId`, `Quantity`, `Condition`
