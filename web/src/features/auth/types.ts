@@ -8,6 +8,13 @@ export interface User {
   contactEmail: string | null
   discordHandle: string | null
   instagramHandle: string | null
+  /** Identity role names, e.g. ["Admin"]. Empty for regular users. */
+  roles: string[]
+}
+
+/** True when the user carries the Admin role (server still enforces the policy). */
+export function isAdmin(user: User | null): boolean {
+  return user?.roles.includes('Admin') ?? false
 }
 
 /** Mirrors the API's AuthResponse: token bundle from register/login/refresh. */

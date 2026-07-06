@@ -1,6 +1,7 @@
 import { startTransition } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from './features/auth/authContext'
+import { isAdmin } from './features/auth/types'
 
 export function AppShell() {
   const { status, user, logout } = useAuth()
@@ -33,6 +34,8 @@ export function AppShell() {
                 Binder
               </NavLink>
               <NavLink to="/binder/import">Import CSV</NavLink>
+              {/* Client-side gate only; every /admin endpoint enforces the role. */}
+              {isAdmin(user) && <NavLink to="/admin">Admin</NavLink>}
               {/* The signed-in name doubles as the door to profile settings. */}
               <NavLink to="/profile" className="user-name" title="Profile settings">
                 {user?.displayName}

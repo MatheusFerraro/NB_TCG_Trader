@@ -30,6 +30,8 @@ services:
       # duplicated. Service name "db" resolves on the compose network. Used by
       # EF/Npgsql in #5.
       ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-nbtcg};Username=${POSTGRES_USER:-nbtcg};Password=${POSTGRES_PASSWORD:-nbtcg_dev_password}"
+      # First-admin bootstrap (#27). Set in .env; empty means no seeding.
+      Admin__SeedEmails: ${Admin__SeedEmails:-}
     ports:
       - "8080:8080"
     depends_on:

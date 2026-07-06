@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using NbTcgTrader.Api.Common.Domain;
 using NbTcgTrader.Api.Common.Persistence;
 
@@ -8,11 +9,12 @@ namespace NbTcgTrader.Api.Features.Auth;
 /// token's hash. Shared by register, login, and refresh inside the Auth slice so
 /// the rotation rules live in exactly one place (CLAUDE.md §6, §15).
 /// </summary>
-public sealed class TokenIssuer(AppDbContext db, ITokenService tokens)
+public sealed class TokenIssuer(AppDbContext db, UserManager<AppUser> users, ITokenService tokens)
 {
     public async Task<AuthResponse> IssueAsync(AppUser user, CancellationToken cancellationToken)
     {
-        var access = tokens.CreateAccessToken(user);
+        var roles = await users.GetRolesAsync(user);
+        var access = tokens.CreateAccessToken(user, roles);
         var refresh = tokens.CreateRefreshToken();
 
         db.RefreshTokens.Add(new RefreshToken
@@ -30,6 +32,6 @@ public sealed class TokenIssuer(AppDbContext db, ITokenService tokens)
             access.ExpiresAt,
             refresh.Value,
             refresh.ExpiresAt,
-            UserResponse.From(user));
+            UserResponse.From(user, roles));
     }
 }
