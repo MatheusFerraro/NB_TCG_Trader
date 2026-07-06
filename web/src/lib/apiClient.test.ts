@@ -108,6 +108,21 @@ describe('apiFetch', () => {
       "'Email' must not be empty.",
     ])
   })
+
+  it('does not require FormData to exist for JSON requests', async () => {
+    vi.stubGlobal('FormData', undefined)
+    const { apiFetch } = await loadClient()
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { ok: true }))
+
+    await apiFetch('/collection', {
+      method: 'POST',
+      body: { quantity: 1 },
+    })
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(JSON.parse(init?.body as string)).toEqual({ quantity: 1 })
+    expect(new Headers(init?.headers).get('Content-Type')).toBe('application/json')
+  })
 })
 
 describe('refreshSession', () => {

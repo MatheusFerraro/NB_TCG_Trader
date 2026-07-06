@@ -89,6 +89,9 @@ export function BinderPage() {
         <h1>Binder</h1>
         <div className="binder-toolbar">
           {data && <span className="binder-count">{data.totalCount} cards</span>}
+          <Link to="/binder/import" className="cta cta-outline">
+            Import CSV
+          </Link>
           <Link to="/binder/add" className="cta">
             Add card
           </Link>
@@ -105,7 +108,7 @@ export function BinderPage() {
       {data && data.items.length === 0 && (
         <p className="binder-empty">
           Your binder is empty. <Link to="/binder/add">Add a card</Link> from the catalog now,
-          or import a CSV later.
+          or <Link to="/binder/import">import a whole spreadsheet</Link> at once.
         </p>
       )}
 

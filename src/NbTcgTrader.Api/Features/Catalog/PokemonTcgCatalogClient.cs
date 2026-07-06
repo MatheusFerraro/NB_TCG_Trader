@@ -137,11 +137,17 @@ public sealed class PokemonTcgCatalogClient(
         });
     }
 
-    public Task<CatalogCard?> GetCardAsync(string externalId, CancellationToken cancellationToken)
+    public async Task<CatalogCard?> GetCardAsync(string externalId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(externalId);
 
-        return GetOrCreateAsync<CatalogCard?>($"catalog:card:{externalId}", async () =>
+        var cacheKey = $"catalog:card:{externalId}";
+        if (cache.TryGetValue(cacheKey, out CatalogCard? cached))
+        {
+            return cached;
+        }
+
+        var card = await WithProviderErrorHandlingAsync(cacheKey, async () =>
         {
             // Provider ids are url-safe, but escape defensively rather than concatenating.
             var url = QueryHelpers.AddQueryString(
@@ -160,6 +166,16 @@ public sealed class PokemonTcgCatalogClient(
 
             return envelope?.Data is { } dto ? MapCard(dto) : null;
         });
+
+        // Never cache a miss: pokemontcg.io intermittently 404s cards its own search
+        // just returned, and a cached null would block resolving that card for the
+        // whole CacheMinutes window (surfaced by the import reconcile flow, #21).
+        if (card is not null)
+        {
+            cache.Set(cacheKey, card, TimeSpan.FromMinutes(_options.CacheMinutes));
+        }
+
+        return card;
     }
 
     /// <summary>
@@ -250,19 +266,24 @@ public sealed class PokemonTcgCatalogClient(
 
     private async Task<T> GetOrCreateAsync<T>(string cacheKey, Func<Task<T>> factory)
     {
+        return (await cache.GetOrCreateAsync(cacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheMinutes);
+            return await WithProviderErrorHandlingAsync(cacheKey, factory);
+        }))!;
+    }
+
+    private async Task<T> WithProviderErrorHandlingAsync<T>(string context, Func<Task<T>> operation)
+    {
         try
         {
-            return (await cache.GetOrCreateAsync(cacheKey, async entry =>
-            {
-                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_options.CacheMinutes);
-                return await factory();
-            }))!;
+            return await operation();
         }
         catch (Exception ex) when (IsProviderFailure(ex))
         {
             // Expected operational failure (provider slow, down, or rate-limited after
             // retries) — surface it as a client-safe 503 instead of an unhandled 500.
-            logger.LogWarning(ex, "Card catalog provider request failed for {CacheKey}", cacheKey);
+            logger.LogWarning(ex, "Card catalog provider request failed for {CacheKey}", context);
             throw new UpstreamUnavailableException(
                 "Card catalog temporarily unavailable",
                 "The card catalog did not respond. Please try again in a moment.",

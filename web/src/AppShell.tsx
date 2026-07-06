@@ -26,7 +26,11 @@ export function AppShell() {
         <nav>
           {status === 'authenticated' && (
             <>
-              <NavLink to="/binder">Binder</NavLink>
+              {/* end: /binder/import is a child path and would highlight both links. */}
+              <NavLink to="/binder" end>
+                Binder
+              </NavLink>
+              <NavLink to="/binder/import">Import CSV</NavLink>
               <span className="user-name">{user?.displayName}</span>
               <button type="button" className="link-button" onClick={handleLogout}>
                 Sign out

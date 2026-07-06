@@ -197,6 +197,45 @@ public class PokemonTcgCatalogClientTests
     }
 
     [Fact]
+    public async Task GetCard_caches_found_cards()
+    {
+        const string singleCard = """
+            { "data": { "id": "base1-4", "name": "Charizard" } }
+            """;
+        var handler = FakeHttpMessageHandler.Json(singleCard);
+        var client = CreateClient(handler);
+
+        await client.GetCardAsync("base1-4", default);
+        await client.GetCardAsync("base1-4", default);
+
+        handler.CallCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetCard_does_not_cache_a_provider_404()
+    {
+        // pokemontcg.io intermittently 404s a card its own search just returned.
+        // Caching that null would block resolving the card until the cache expires,
+        // so the next lookup must reach the provider again.
+        const string singleCard = """
+            { "data": { "id": "base1-4", "name": "Charizard" } }
+            """;
+        var calls = 0;
+        var handler = new FakeHttpMessageHandler(_ =>
+            Interlocked.Increment(ref calls) == 1
+                ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                : JsonResponse(singleCard));
+        var client = CreateClient(handler);
+
+        var miss = await client.GetCardAsync("base1-4", default);
+        var hit = await client.GetCardAsync("base1-4", default);
+
+        miss.ShouldBeNull();
+        hit.ShouldNotBeNull();
+        handler.CallCount.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task SearchCards_requests_select_projection()
     {
         var handler = FakeHttpMessageHandler.Json(EmptyPage);
