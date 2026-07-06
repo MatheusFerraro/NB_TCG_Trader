@@ -118,7 +118,7 @@ secret"):
 | `Jwt__SigningKey` | secret | `jwt-signingkey` |
 | `Jwt__Issuer` | manual | `nb-tcg-trader` (optional; default in appsettings.json) |
 | `Jwt__Audience` | manual | `nb-tcg-trader` (optional; default in appsettings.json) |
-| `CardApi__Key` | secret | `cardapi-key` (optional) |
+| `CardApi__Key` | secret | `cardapi-key` (optional — omit this variable if you did not create the secret) |
 | `Cors__AllowedOrigins__0` | manual | Deployed frontend origin from #25, e.g. `https://<swa-host>.azurestaticapps.net`. Leave unset until then — unset = CORS locked down |
 | `Catalog__PlaceholderImageUrl` | manual | `https://<app-fqdn>/assets/card-placeholder.svg` — see note below |
 
