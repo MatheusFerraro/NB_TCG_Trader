@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using NbTcgTrader.Api.Common.Domain;
+using NbTcgTrader.Api.Common.Persistence;
 
 namespace NbTcgTrader.Api.Features.Admin;
 
@@ -20,6 +22,7 @@ public sealed class UnlockUserRequestValidator : AbstractValidator<UnlockUserReq
 /// failed-attempt counter so the user isn't immediately re-locked. Audited.
 /// </summary>
 public sealed class UnlockUserHandler(
+    AppDbContext db,
     UserManager<AppUser> users,
     AdminAuditWriter audit,
     ILogger<UnlockUserHandler> logger)
@@ -39,6 +42,8 @@ public sealed class UnlockUserHandler(
                 title: "User not found");
         }
 
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         user.LockoutEnd = null;
         user.AccessFailedCount = 0;
         var result = await users.UpdateAsync(user);
@@ -51,8 +56,9 @@ public sealed class UnlockUserHandler(
             return Results.ValidationProblem(errors);
         }
 
-        await audit.WriteAsync(
-            adminUserId, userId, AdminAction.UserUnlocked, request.Reason, cancellationToken);
+        audit.Stage(adminUserId, userId, AdminAction.UserUnlocked, request.Reason);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
             "Admin {AdminUserId} unlocked user {TargetUserId}", adminUserId, userId);

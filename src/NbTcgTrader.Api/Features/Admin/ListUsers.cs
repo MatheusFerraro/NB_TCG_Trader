@@ -56,14 +56,15 @@ public sealed class ListUsersHandler(AppDbContext db)
         if (!string.IsNullOrWhiteSpace(request.City))
         {
             var city = request.City.Trim();
-            query = query.Where(u => u.City != null && u.City.ToLower() == city.ToLower());
+            query = query.Where(u =>
+                u.City != null && EF.Functions.ILike(u.City, Escape(city), "\\"));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Country))
         {
             var country = request.Country.Trim();
             query = query.Where(u =>
-                u.Country != null && u.Country.ToLower() == country.ToLower());
+                u.Country != null && EF.Functions.ILike(u.Country, Escape(country), "\\"));
         }
 
         if (request.Locked.HasValue)

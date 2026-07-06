@@ -66,6 +66,9 @@ public sealed class LockUserHandler(
                 title: "Invalid lock target");
         }
 
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+
         // Indefinite lockout via Identity's own mechanism, so Login/Refresh's
         // IsLockedOutAsync checks pick it up with no extra state.
         user.LockoutEnabled = true;
@@ -85,11 +88,12 @@ public sealed class LockUserHandler(
         var revoked = await db.RefreshTokens
             .Where(t => t.UserId == userId && t.RevokedAt == null)
             .ExecuteUpdateAsync(
-                setters => setters.SetProperty(t => t.RevokedAt, DateTimeOffset.UtcNow),
+                setters => setters.SetProperty(t => t.RevokedAt, now),
                 cancellationToken);
 
-        await audit.WriteAsync(
-            adminUserId, userId, AdminAction.UserLocked, request.Reason, cancellationToken);
+        audit.Stage(adminUserId, userId, AdminAction.UserLocked, request.Reason);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
             "Admin {AdminUserId} locked user {TargetUserId}; {RevokedTokens} refresh token(s) revoked",

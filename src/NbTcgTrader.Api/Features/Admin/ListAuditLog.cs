@@ -30,23 +30,27 @@ public sealed class ListAuditLogHandler(AppDbContext db)
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderByDescending(a => a.CreatedAt)
-            .ThenByDescending(a => a.Id) // tie-break so paging is deterministic
+        var items = await (
+                from audit in query
+                join adminUser in db.Users.AsNoTracking()
+                    on audit.AdminUserId equals adminUser.Id into adminUsers
+                from adminUser in adminUsers.DefaultIfEmpty()
+                join targetUser in db.Users.AsNoTracking()
+                    on audit.TargetUserId equals targetUser.Id into targetUsers
+                from targetUser in targetUsers.DefaultIfEmpty()
+                orderby audit.CreatedAt descending, audit.Id descending
+                select new AdminAuditEntryResponse(
+                    audit.Id,
+                    audit.AdminUserId,
+                    adminUser == null ? null : adminUser.DisplayName,
+                    audit.TargetUserId,
+                    targetUser == null ? null : targetUser.DisplayName,
+                    audit.Action,
+                    audit.Reason,
+                    audit.CorrelationId,
+                    audit.CreatedAt))
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(a => new AdminAuditEntryResponse(
-                a.Id,
-                a.AdminUserId,
-                db.Users.Where(u => u.Id == a.AdminUserId)
-                    .Select(u => u.DisplayName).FirstOrDefault(),
-                a.TargetUserId,
-                db.Users.Where(u => u.Id == a.TargetUserId)
-                    .Select(u => u.DisplayName).FirstOrDefault(),
-                a.Action,
-                a.Reason,
-                a.CorrelationId,
-                a.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return Results.Ok(new AdminAuditLogResponse(

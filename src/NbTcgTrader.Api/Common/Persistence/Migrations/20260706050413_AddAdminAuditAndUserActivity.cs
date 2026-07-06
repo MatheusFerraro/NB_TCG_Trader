@@ -17,7 +17,7 @@ namespace NbTcgTrader.Api.Common.Persistence.Migrations
                 table: "AspNetUsers",
                 type: "timestamp with time zone",
                 nullable: false,
-                defaultValue: new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)));
+                defaultValueSql: "now()");
 
             migrationBuilder.AddColumn<DateTimeOffset>(
                 name: "LastLoginAt",

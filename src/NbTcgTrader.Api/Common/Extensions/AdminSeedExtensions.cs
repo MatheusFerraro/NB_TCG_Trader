@@ -38,7 +38,17 @@ public static class AdminSeedExtensions
 
         if (!await roles.RoleExistsAsync(AuthenticationExtensions.AdminRole))
         {
-            await roles.CreateAsync(new IdentityRole(AuthenticationExtensions.AdminRole));
+            var createRoleResult = await roles.CreateAsync(
+                new IdentityRole(AuthenticationExtensions.AdminRole));
+            if (!createRoleResult.Succeeded)
+            {
+                logger.LogError(
+                    "Admin seed: failed to create Admin role: {Errors}",
+                    string.Join(
+                        "; ",
+                        createRoleResult.Errors.Select(e => $"{e.Code}: {e.Description}")));
+                return;
+            }
         }
 
         foreach (var email in emails)
@@ -54,7 +64,19 @@ public static class AdminSeedExtensions
 
             if (!await users.IsInRoleAsync(user, AuthenticationExtensions.AdminRole))
             {
-                await users.AddToRoleAsync(user, AuthenticationExtensions.AdminRole);
+                var addToRoleResult = await users.AddToRoleAsync(
+                    user, AuthenticationExtensions.AdminRole);
+                if (!addToRoleResult.Succeeded)
+                {
+                    logger.LogError(
+                        "Admin seed: failed to grant Admin role to user {UserId}: {Errors}",
+                        user.Id,
+                        string.Join(
+                            "; ",
+                            addToRoleResult.Errors.Select(e => $"{e.Code}: {e.Description}")));
+                    continue;
+                }
+
                 logger.LogInformation("Admin seed: granted Admin role to user {UserId}", user.Id);
             }
         }
