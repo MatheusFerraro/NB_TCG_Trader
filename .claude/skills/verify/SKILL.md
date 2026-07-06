@@ -24,7 +24,7 @@ Playwright is not a project dep — install throwaway in the scratchpad (`npm i 
 
 ## Gotchas
 
-- **No user-secrets configured** (`UserSecretsId` missing from csproj): `Jwt__SigningKey` MUST come from env or the API 500s on token issue.
+- **User-secrets ARE configured** (`UserSecretsId` in the API csproj): `Jwt:SigningKey`, `ConnectionStrings:Default`, and `Admin:SeedEmails` may come from the developer's secret store in Development — env vars still override.
 - **PowerShell 5.1**: `[RandomNumberGenerator]::Fill()` doesn't exist — use `::Create()` + `.GetBytes()`. A failed statement before `dotnet run` does NOT stop the launch; check env vars actually got set.
 - **Password policy** (PersistenceExtensions.cs): 12+ chars, upper, lower, digit, symbol. Test password that works: `Correct-Horse-Battery-42`.
 - **Refresh tokens are single-use** (rotation). Frontend dedupes concurrent refreshes (apiClient.ts single-flight); don't fire parallel /auth/refresh in tests.

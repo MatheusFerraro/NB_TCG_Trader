@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using NbTcgTrader.Api.Common.Extensions;
 
 namespace NbTcgTrader.Tests;
 
@@ -18,6 +19,11 @@ public sealed class ApiWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting(
             "ConnectionStrings:Default",
             "Host=localhost;Port=5432;Database=nbtcg_test_unused;Username=test;Password=test");
+
+        // The Development host also loads the developer's user-secrets; if those
+        // set Admin:SeedEmails, the admin seed would query the (unreachable)
+        // database above and kill the boot. Pin it empty so seeding no-ops.
+        builder.UseSetting(AdminSeedExtensions.SeedEmailsKey, "");
 
         // Auth wiring validates the Jwt config on startup (ValidateOnStart), so the
         // host needs a valid signing key (>= 32 bytes) + issuer/audience to boot —
