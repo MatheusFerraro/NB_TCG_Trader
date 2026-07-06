@@ -159,8 +159,21 @@ Frontend (build-time): `VITE_API_URL` — the deployed API origin, no trailing
 slash.
 
 - **Migrations** run on startup only in Development. In production, apply them
-  as a deploy step (`dotnet ef database update` or an EF migration bundle)
-  before routing traffic.
+  as a deliberate deploy step before routing traffic:
+
+  ```
+  dotnet ef database update --project src/NbTcgTrader.Api
+  ```
+
+  The design-time factory resolves `ConnectionStrings:Default` from user-secrets
+  first, then the `ConnectionStrings__Default` environment variable (env wins),
+  falling back to the local docker-compose defaults. Point it at Supabase via
+  either source; never commit the value.
+- **Supabase connection string**: use the **Session pooler** string (port 5432,
+  username `postgres.<project-ref>`, `Ssl Mode=Require`). The direct-connection
+  host (`db.<project-ref>.supabase.co`) is IPv6-only on the free tier and fails
+  DNS on IPv4-only networks; the Transaction pooler (port 6543) breaks the
+  prepared statements EF relies on.
 - **Forwarded headers** are always on and trust a single proxy hop — correct
   behind ACA/Fly/Render ingress. Do not expose the container directly to the
   internet without a proxy in front.
