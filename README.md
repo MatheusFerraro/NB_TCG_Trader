@@ -141,8 +141,10 @@ environment at deploy time and can be rotated without code changes.
 
 Deploy target: API container on Azure Container Apps (alt: Fly.io/Render),
 frontend on Azure Static Web Apps (alt: Vercel), database on Supabase Postgres.
-Step-by-step manual ACA deployment:
-[docs/deploy-azure-container-apps.md](docs/deploy-azure-container-apps.md).
+Step-by-step manual deployment guides:
+[docs/deploy-azure-container-apps.md](docs/deploy-azure-container-apps.md) (API)
+and [docs/deploy-azure-static-web-apps.md](docs/deploy-azure-static-web-apps.md)
+(frontend).
 
 Production environment checklist (API container):
 
