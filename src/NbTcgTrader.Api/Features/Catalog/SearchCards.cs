@@ -19,6 +19,17 @@ public sealed class CatalogSearchRequestValidator : AbstractValidator<CatalogSea
 {
     public CatalogSearchRequestValidator()
     {
+        // At least one filter is required: a filterless search maps to the provider's
+        // match-everything query (q=*), which pokemontcg.io cannot answer within the
+        // resilience pipeline's budget — measured 16s of retries ending in a 503 (#48).
+        // The frontend already refuses to submit an empty search; fail fast here too.
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.Query)
+                       || !string.IsNullOrWhiteSpace(x.Set)
+                       || !string.IsNullOrWhiteSpace(x.Number))
+            .WithName(nameof(CatalogSearchRequest.Query))
+            .WithMessage("Provide at least one filter: a card name, set, or number.");
+
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
 
         // A sane hard cap; the client further clamps to the configured CardApi:MaxPageSize.
