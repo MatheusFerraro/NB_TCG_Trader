@@ -6,7 +6,8 @@ namespace NbTcgTrader.Api.Features.Catalog;
 /// <summary>
 /// Query for the catalog browse endpoint (BACKLOG #9), bound from the query string via
 /// <c>[AsParameters]</c>. <see cref="Query"/> is the free-text name filter; it maps onto
-/// the client's <see cref="CatalogSearchQuery.Name"/>. All filters are optional and combine.
+/// the client's <see cref="CatalogSearchQuery.Name"/>. Filters combine; at least one of
+/// name/set/number is required (a filterless search cannot be answered by the provider, #48).
 /// </summary>
 public sealed record CatalogSearchRequest(
     string? Query = null,
@@ -27,7 +28,7 @@ public sealed class CatalogSearchRequestValidator : AbstractValidator<CatalogSea
             .Must(x => !string.IsNullOrWhiteSpace(x.Query)
                        || !string.IsNullOrWhiteSpace(x.Set)
                        || !string.IsNullOrWhiteSpace(x.Number))
-            .WithName(nameof(CatalogSearchRequest.Query))
+            .OverridePropertyName(nameof(CatalogSearchRequest.Query))
             .WithMessage("Provide at least one filter: a card name, set, or number.");
 
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1);

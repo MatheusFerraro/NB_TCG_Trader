@@ -55,9 +55,11 @@ pokemontcg.io cannot answer: it burned the full retry budget (16 s) and returned
 now rejects filterless requests up front in `CatalogSearchRequestValidator`
 (400, "Provide at least one filter") instead of hammering the provider.
 
-Also added an Information-level timing log in `PokemonTcgCatalogClient` for every
-provider round trip (query, page, elapsed ms, result counts — no secrets), so
-deployed latency is visible in Log Analytics without extra tooling.
+Also added a timing log in `PokemonTcgCatalogClient` for every provider round trip
+(query, page, elapsed ms, result counts — no secrets). It logs at Debug to keep
+production output lean; to see provider timings in a deployed environment, set the
+Serilog override `Serilog__MinimumLevel__Override__NbTcgTrader.Api.Features.Catalog`
+to `Debug` (request-level latency is always visible via the Serilog request log).
 
 ## Redis decision: deferred
 
