@@ -51,7 +51,7 @@ cards for sale and connect with local buyers.
 | Frontend         | React + TypeScript (Vite)                           |
 | Container        | Docker                                              |
 | API host         | Azure Container Apps (alt: Fly.io / Render)          |
-| Frontend host    | Azure Static Web Apps (alt: Vercel)                 |
+| Frontend host    | Vercel (SWA region-blocked on student subscription) |
 | Logging          | Serilog                                             |
 | Validation       | FluentValidation                                    |
 | Tests            | xUnit + Shouldly                                    |

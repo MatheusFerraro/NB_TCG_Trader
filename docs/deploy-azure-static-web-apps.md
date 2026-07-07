@@ -1,5 +1,11 @@
 # Deploy the frontend to Azure Static Web Apps (manual)
 
+> **Superseded:** the Azure for Students subscription's region policy
+> (`RequestDisallowedByAzure`) blocks every region SWA offers, so the frontend
+> deploys to Vercel instead — see
+> [deploy-frontend-vercel.md](deploy-frontend-vercel.md). This guide is kept
+> in case the project moves to an unrestricted subscription.
+
 Manual deployment of `web/` (React + Vite) to Azure Static Web Apps (SWA), per
 issue #25. Pairs with the API deployment in
 [deploy-azure-container-apps.md](deploy-azure-container-apps.md).

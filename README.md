@@ -143,8 +143,9 @@ Deploy target: API container on Azure Container Apps (alt: Fly.io/Render),
 frontend on Azure Static Web Apps (alt: Vercel), database on Supabase Postgres.
 Step-by-step manual deployment guides:
 [docs/deploy-azure-container-apps.md](docs/deploy-azure-container-apps.md) (API)
-and [docs/deploy-azure-static-web-apps.md](docs/deploy-azure-static-web-apps.md)
-(frontend).
+and [docs/deploy-frontend-vercel.md](docs/deploy-frontend-vercel.md) (frontend;
+Static Web Apps is region-blocked on the student subscription — see the note in
+[docs/deploy-azure-static-web-apps.md](docs/deploy-azure-static-web-apps.md)).
 
 Production environment checklist (API container):
 
