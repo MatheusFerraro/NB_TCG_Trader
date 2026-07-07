@@ -100,8 +100,11 @@ alphanumeric/dashes):
 Generate the JWT key on Windows without openssl:
 
 ```powershell
-$bytes = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Fill($bytes); [Convert]::ToBase64String($bytes)
+$rng = [Security.Cryptography.RNGCryptoServiceProvider]::new(); $bytes = New-Object byte[] 48; $rng.GetBytes($bytes); [Convert]::ToBase64String($bytes)
 ```
+
+(Windows PowerShell 5.1 compatible. If the output is all `A` characters, the
+random fill failed — never use that value.)
 
 Never reuse the local-dev signing key, and never commit any of these values.
 
