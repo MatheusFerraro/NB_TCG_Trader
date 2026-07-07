@@ -18,10 +18,33 @@ public class CatalogSearchValidatorTests
     }
 
     [Fact]
-    public void Empty_request_passes()
+    public void Rejects_filterless_request()
     {
-        // All filters optional; defaults (page 1, size 25) are valid, so bare browse works.
-        Validator.Validate(new CatalogSearchRequest()).IsValid.ShouldBeTrue();
+        // A filterless search maps to the provider's match-everything query (q=*),
+        // which pokemontcg.io cannot answer — it burns the retry budget and 503s (#48).
+        var result = Validator.Validate(new CatalogSearchRequest());
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldContain(e => e.PropertyName == nameof(CatalogSearchRequest.Query));
+    }
+
+    [Theory]
+    [InlineData("charizard", null, null)]
+    [InlineData(null, "base1", null)]
+    [InlineData(null, null, "4")]
+    public void Any_single_filter_passes(string? query, string? set, string? number)
+    {
+        var request = new CatalogSearchRequest(Query: query, Set: set, Number: number);
+
+        Validator.Validate(request).IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Whitespace_only_filters_are_rejected()
+    {
+        var result = Validator.Validate(new CatalogSearchRequest(Query: " ", Set: "\t", Number: " "));
+
+        result.IsValid.ShouldBeFalse();
     }
 
     [Theory]

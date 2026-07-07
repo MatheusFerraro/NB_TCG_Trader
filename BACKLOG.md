@@ -203,6 +203,11 @@ imports) — no per-request tracking, no IPs.
 **#45 Web: binder review feedback** ✅
 **#46 Web: manual add-card flow (+ catalog 503 on provider timeout)** ✅
 **#47 Web: manage-card dialog with edit and delete** ✅
+**#48 Measure and tune catalog search performance** ✅
+Measured latency (broad/exact/cached/invalid), verified pagination + cache +
+prefetch, confirmed indexes cover local lookup paths, rejected filterless
+searches (was 16 s → 503), added provider timing log. **Redis deferred** —
+see `docs/perf-catalog-search.md`.
 **#58 Web: profile settings page for seller contact info** ✅
 **#59 Admin hub review feedback** ✅
 

@@ -6,7 +6,8 @@ namespace NbTcgTrader.Api.Features.Catalog;
 /// <summary>
 /// Query for the catalog browse endpoint (BACKLOG #9), bound from the query string via
 /// <c>[AsParameters]</c>. <see cref="Query"/> is the free-text name filter; it maps onto
-/// the client's <see cref="CatalogSearchQuery.Name"/>. All filters are optional and combine.
+/// the client's <see cref="CatalogSearchQuery.Name"/>. Filters combine; at least one of
+/// name/set/number is required (a filterless search cannot be answered by the provider, #48).
 /// </summary>
 public sealed record CatalogSearchRequest(
     string? Query = null,
@@ -19,6 +20,17 @@ public sealed class CatalogSearchRequestValidator : AbstractValidator<CatalogSea
 {
     public CatalogSearchRequestValidator()
     {
+        // At least one filter is required: a filterless search maps to the provider's
+        // match-everything query (q=*), which pokemontcg.io cannot answer within the
+        // resilience pipeline's budget — measured 16s of retries ending in a 503 (#48).
+        // The frontend already refuses to submit an empty search; fail fast here too.
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.Query)
+                       || !string.IsNullOrWhiteSpace(x.Set)
+                       || !string.IsNullOrWhiteSpace(x.Number))
+            .OverridePropertyName(nameof(CatalogSearchRequest.Query))
+            .WithMessage("Provide at least one filter: a card name, set, or number.");
+
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
 
         // A sane hard cap; the client further clamps to the configured CardApi:MaxPageSize.

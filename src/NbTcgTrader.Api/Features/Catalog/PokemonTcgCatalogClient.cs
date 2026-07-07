@@ -88,13 +88,18 @@ public sealed class PokemonTcgCatalogClient(
                 ["select"] = SelectFields,
             });
 
+            // The factory only runs on a cache miss, so this times the provider round
+            // trip (including the resilience pipeline's retries) — the observability
+            // asked for by #48. Cache hits never reach here and cost ~tens of ms.
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var envelope = await http.GetFromJsonAsync<CardsEnvelope>(url, JsonOptions, cancellationToken)
                            ?? new CardsEnvelope(null, page, pageSize, 0);
+            stopwatch.Stop();
 
             var items = (envelope.Data ?? []).Select(MapCard).ToArray();
             logger.LogDebug(
-                "pokemontcg.io search returned {Count} card(s) (totalCount {TotalCount})",
-                items.Length, envelope.TotalCount);
+                "pokemontcg.io search {Query} page {Page} took {ElapsedMs} ms: {Count} card(s) (totalCount {TotalCount})",
+                q, page, stopwatch.ElapsedMilliseconds, items.Length, envelope.TotalCount);
 
             return new CatalogPage<CatalogCard>(
                 items,
