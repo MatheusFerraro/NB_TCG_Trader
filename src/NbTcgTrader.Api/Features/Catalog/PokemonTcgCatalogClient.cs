@@ -97,7 +97,7 @@ public sealed class PokemonTcgCatalogClient(
             stopwatch.Stop();
 
             var items = (envelope.Data ?? []).Select(MapCard).ToArray();
-            logger.LogInformation(
+            logger.LogDebug(
                 "pokemontcg.io search {Query} page {Page} took {ElapsedMs} ms: {Count} card(s) (totalCount {TotalCount})",
                 q, page, stopwatch.ElapsedMilliseconds, items.Length, envelope.TotalCount);
 
