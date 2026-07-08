@@ -210,6 +210,16 @@ searches (was 16 s → 503), added provider timing log. **Redis deferred** —
 see `docs/perf-catalog-search.md`.
 **#58 Web: profile settings page for seller contact info** ✅
 **#59 Admin hub review feedback** ✅
+**#66 Spike: AI-assisted semantic card search with pgvector** ✅
+Spike concluded: defer query-time pgvector; ship no-AI pg_trgm similarity ranking
+first (see `docs/adr-ai-semantic-card-search.md`). Two phase-1 slices landed from it:
+**#66a Relevance-rank catalog search** ✅ — `GET /catalog/cards` orders name hits by
+trigram `similarity()` instead of alphabetical.
+**#66b Import-assist: rank reconciliation candidates** ✅ —
+`GET /import/jobs/{jobId}/rows/{rowId}/candidates` ranks the local catalog by pg_trgm
+similarity (typo-tolerant `%` + exact-number boost); owner-scoped, real `Card` ids only,
+no external call. Enabling change: `extensions` schema added to the connection
+search_path so pg_trgm functions resolve. pgvector remains deferred to phase 2.
 
 ---
 
@@ -279,3 +289,6 @@ Child of #64. Blocked until the frontend and API share one registrable domain.
 - Flutter mobile app
 - Multi-TCG UI (expose Magic/Lorcana/etc. already supported by the schema)
 - Localization (PT-BR / EN / FR) for the Moncton + Brazil + bilingual NB market
+- pgvector semantic + cross-lingual card search behind a feature flag (from the #66
+  spike; only if natural-language / cross-lingual search becomes a proven need — see
+  `docs/adr-ai-semantic-card-search.md` §3–§7)
