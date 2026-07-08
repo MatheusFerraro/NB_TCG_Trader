@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NbTcgTrader.Api.Common.Domain;
 using NbTcgTrader.Api.Common.Persistence;
+using Npgsql;
 
 namespace NbTcgTrader.Api.Common.Extensions;
 
@@ -30,7 +31,7 @@ public static class PersistenceExtensions
                     "Connection string 'ConnectionStrings:Default' is not configured.");
             }
 
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(WithExtensionsOnSearchPath(connectionString));
         });
 
         // Identity's token providers (password reset, email confirm, etc.) depend
@@ -60,6 +61,27 @@ public static class PersistenceExtensions
             .AddDefaultTokenProviders();
 
         return services;
+    }
+
+    /// <summary>
+    /// Ensures the dedicated <c>extensions</c> schema is on the connection's search_path.
+    /// pg_trgm lives there (not in <c>public</c>, a Supabase linter hardening — see
+    /// <c>MovePgTrgmToExtensionsSchema</c>), so unqualified extension functions such as
+    /// <c>similarity()</c> and the <c>%</c> operator used for relevance ranking (#66) would
+    /// otherwise fail to resolve. This mirrors Supabase's own default search_path; Postgres
+    /// ignores a not-yet-created schema, and application tables still resolve to
+    /// <c>public</c> first, so it is safe on a fresh database and existing deployments alike.
+    /// A caller-supplied search_path is respected.
+    /// </summary>
+    private static string WithExtensionsOnSearchPath(string connectionString)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
+        if (string.IsNullOrWhiteSpace(builder.SearchPath))
+        {
+            builder.SearchPath = "public, extensions";
+        }
+
+        return builder.ConnectionString;
     }
 
     /// <summary>
