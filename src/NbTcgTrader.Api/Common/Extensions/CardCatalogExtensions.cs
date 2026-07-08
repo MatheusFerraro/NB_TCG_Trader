@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using NbTcgTrader.Api.Features.Catalog;
+using NbTcgTrader.Api.Features.Catalog.Seeding;
 
 namespace NbTcgTrader.Api.Common.Extensions;
 
@@ -55,12 +56,22 @@ public static class CardCatalogExtensions
                 "Catalog:PlaceholderImageUrl must be an absolute HTTP(S) URL.")
             .ValidateOnStart();
 
-        // Catalog slice handlers.
+        // Catalog slice handlers. Search is served from Postgres (#72), not the
+        // provider — the local catalog owns the hot path; the client stays for
+        // by-id fallback and import matching.
         services.AddScoped<SearchCardsHandler>();
 
         // Shared provider-result persistence: add-to-binder (#10) and import
         // matching (#15) stage catalog rows through the same store.
         services.AddScoped<CatalogCardStore>();
+
+        // One-shot catalog seeder (#72): reads a local pokemon-tcg-data checkout and
+        // upserts sets + cards. Wired always so `dotnet run -- seed-catalog` resolves
+        // it; it only runs when the CLI command is invoked.
+        services.AddOptions<SeedOptions>()
+            .Bind(configuration.GetSection(SeedOptions.SectionName));
+        services.AddSingleton<ICardDataSource, FileSystemPokemonDataSource>();
+        services.AddScoped<CatalogSeeder>();
 
         // Catalog lookups are cached in memory (CLAUDE.md §8). No cache exists yet
         // elsewhere, so register it here; AddMemoryCache is idempotent if reused later.
