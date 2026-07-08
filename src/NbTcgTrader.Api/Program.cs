@@ -114,6 +114,9 @@ try
     else
     {
         app.UseHsts();
+        // Baseline security headers on the deployed surface (CSP, nosniff, no-frame).
+        // Skipped in Development so the Scalar docs UI keeps working (CLAUDE.md §15).
+        app.UseApiSecurityHeaders();
     }
 
     app.UseHttpsRedirection();
