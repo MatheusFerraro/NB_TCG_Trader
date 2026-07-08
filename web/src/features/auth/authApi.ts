@@ -1,5 +1,5 @@
-import { apiFetch } from '../../lib/apiClient'
-import { clearTokens, setTokens } from '../../lib/tokenStore'
+import { API_URL, apiFetch } from '../../lib/apiClient'
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '../../lib/tokenStore'
 import type {
   AuthResponse,
   LoginRequest,
@@ -34,9 +34,30 @@ export function updateProfile(request: UpdateProfileRequest): Promise<User> {
 }
 
 /**
- * Client-side only: drops both tokens. The MVP API has no revoke endpoint;
- * the orphaned refresh token expires server-side on its own schedule.
+ * Signs out. Clears the in-memory access token and the persisted refresh token
+ * immediately, then best-effort asks the server to revoke that refresh token so it
+ * cannot outlive the session. The revoke uses a direct fetch (not apiFetch) so a
+ * stale access token never triggers a refresh that would rotate the very token we
+ * are trying to kill; a failed revoke is non-fatal — the token expires on its own.
  */
 export function logout(): void {
+  const accessToken = getAccessToken()
+  const refreshToken = getRefreshToken()
   clearTokens()
+
+  if (!accessToken || !refreshToken) {
+    return
+  }
+
+  void fetch(`${API_URL}/auth/logout`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ refreshToken }),
+    keepalive: true,
+  }).catch(() => {
+    // Best-effort: the refresh token still expires server-side on its own schedule.
+  })
 }
