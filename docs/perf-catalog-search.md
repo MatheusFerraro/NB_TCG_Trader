@@ -1,5 +1,14 @@
 # Catalog search performance (#48)
 
+> **Superseded by #72 (2026-07-08):** `GET /catalog/cards` is now served from the local
+> catalog in Postgres (seeded from pokemon-tcg-data), not the pokemontcg.io provider.
+> Fuzzy/partial name search runs against a `pg_trgm` GIN index on `Card.Name`; the
+> provider round trip has left the search hot path entirely (`ICardCatalogClient`
+> remains only for by-id fallback and import matching). The provider-latency
+> measurements below are retained as the historical record that motivated owning the
+> catalog.
+
+
 Measured 2026-07-07 against a local Development API (`dotnet run`, Release-equivalent
 behavior for the HTTP path) calling the live pokemontcg.io v2 API with an API key.
 Numbers are end-to-end HTTP round trips against `GET /catalog/cards` as the frontend
