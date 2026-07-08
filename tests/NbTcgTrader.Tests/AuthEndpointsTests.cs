@@ -138,15 +138,17 @@ public sealed class AuthEndpointsTests : IAsyncLifetime
         var rotated = await ReadAuthAsync(refreshed);
         rotated.RefreshToken.ShouldNotBe(registered.RefreshToken);
 
+        // The successor works. (Exercise it before replaying the old token: replaying
+        // a rotated token is a reuse signal that revokes the whole family — covered by
+        // Reused_refresh_token_revokes_the_whole_family.)
+        var again = await client.PostAsJsonAsync(
+            "/auth/refresh", new { refreshToken = rotated.RefreshToken });
+        again.StatusCode.ShouldBe(HttpStatusCode.OK);
+
         // The original token was rotated out: replaying it must fail.
         var replay = await client.PostAsJsonAsync(
             "/auth/refresh", new { refreshToken = registered.RefreshToken });
         replay.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-
-        // ...and the new token still works.
-        var again = await client.PostAsJsonAsync(
-            "/auth/refresh", new { refreshToken = rotated.RefreshToken });
-        again.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     [SkippableFact]
@@ -167,6 +169,64 @@ public sealed class AuthEndpointsTests : IAsyncLifetime
 
         responses.Count(r => r.StatusCode == HttpStatusCode.OK).ShouldBe(1);
         responses.Count(r => r.StatusCode == HttpStatusCode.Unauthorized).ShouldBe(1);
+    }
+
+    [SkippableFact]
+    public async Task Reused_refresh_token_revokes_the_whole_family()
+    {
+        var client = CreateClient();
+        var email = UniqueEmail();
+        var registered = await ReadAuthAsync(
+            await client.PostAsJsonAsync("/auth/register", ValidRegister(email)));
+
+        // Rotate once: the original token dies, a successor is issued.
+        var rotated = await ReadAuthAsync(await client.PostAsJsonAsync(
+            "/auth/refresh", new { refreshToken = registered.RefreshToken }));
+
+        // Replay the already-rotated token. This is a reuse/compromise signal, so
+        // the whole family is revoked — not just this token (CLAUDE.md §15).
+        var replay = await client.PostAsJsonAsync(
+            "/auth/refresh", new { refreshToken = registered.RefreshToken });
+        replay.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        // The still-live successor must now also be dead: the reuse killed it too.
+        var successor = await client.PostAsJsonAsync(
+            "/auth/refresh", new { refreshToken = rotated.RefreshToken });
+        successor.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [SkippableFact]
+    public async Task Logout_revokes_the_refresh_token()
+    {
+        var client = CreateClient();
+        var email = UniqueEmail();
+        var auth = await ReadAuthAsync(
+            await client.PostAsJsonAsync("/auth/register", ValidRegister(email)));
+
+        var logout = new HttpRequestMessage(HttpMethod.Post, "/auth/logout")
+        {
+            Content = JsonContent.Create(new { refreshToken = auth.RefreshToken }),
+        };
+        logout.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
+
+        var logoutResponse = await client.SendAsync(logout);
+        logoutResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        // The revoked token can no longer refresh.
+        var refresh = await client.PostAsJsonAsync(
+            "/auth/refresh", new { refreshToken = auth.RefreshToken });
+        refresh.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [SkippableFact]
+    public async Task Logout_without_a_token_returns_401()
+    {
+        var client = CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/auth/logout", new { refreshToken = "anything" });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     [SkippableFact]
