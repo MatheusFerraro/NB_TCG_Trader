@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useRef, useState } from 'react'
+import { startTransition, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './features/auth/authContext'
 import { isAdmin } from './features/auth/types'
@@ -8,16 +8,17 @@ export function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [lastPath, setLastPath] = useState(location.pathname)
+  const lastPathRef = useRef(location.pathname)
   const toggleRef = useRef<HTMLButtonElement>(null)
 
-  // Collapse the mobile menu whenever the route changes so a tapped link
-  // does not leave the drawer covering the page it navigated to. Adjusting
-  // state during render (not in an effect) avoids a wasted extra paint.
-  if (location.pathname !== lastPath) {
-    setLastPath(location.pathname)
+  // Collapse the mobile menu whenever the route changes so a tapped link does
+  // not leave the drawer covering the page it navigated to. useLayoutEffect
+  // closes it before paint (no flash); the ref guard skips the initial mount.
+  useLayoutEffect(() => {
+    if (location.pathname === lastPathRef.current) return
+    lastPathRef.current = location.pathname
     setMenuOpen(false)
-  }
+  }, [location.pathname])
 
   // Escape closes the drawer and returns focus to the toggle that opened it.
   useEffect(() => {

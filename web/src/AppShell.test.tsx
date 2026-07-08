@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -46,7 +46,7 @@ function renderShell(status: AuthStatus, user: User | null) {
 }
 
 afterEach(() => {
-  document.body.innerHTML = ''
+  cleanup()
 })
 
 describe('AppShell mobile navigation', () => {
