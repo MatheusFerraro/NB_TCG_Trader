@@ -5,6 +5,7 @@ using NbTcgTrader.Api.Common.Extensions;
 using NbTcgTrader.Api.Features.Admin;
 using NbTcgTrader.Api.Features.Auth;
 using NbTcgTrader.Api.Features.Catalog;
+using NbTcgTrader.Api.Features.Catalog.Seeding;
 using NbTcgTrader.Api.Features.Collection;
 using NbTcgTrader.Api.Features.Import;
 using NbTcgTrader.Api.Features.Marketplace;
@@ -72,6 +73,14 @@ try
     builder.Services.AddApiAdmin();
 
     var app = builder.Build();
+
+    // One-shot CLI: `dotnet run -- seed-catalog` migrates + ingests the catalog and
+    // exits without serving requests (#72). Everything above registered its services;
+    // nothing below (pipeline, endpoints) runs for the seed command.
+    if (CatalogSeedCommand.IsRequested(args))
+    {
+        return await CatalogSeedCommand.RunAsync(app, CancellationToken.None);
+    }
 
     // Apply migrations on startup in Development only, and only when enabled.
     // Tests run in Development too, so the flag lets the test host opt out and
