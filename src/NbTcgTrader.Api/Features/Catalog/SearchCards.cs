@@ -70,11 +70,12 @@ public sealed class SearchCardsHandler(
             .Include(c => c.CardSet)
             .Where(c => c.Game!.Slug == GameSlug);
 
-        if (!string.IsNullOrWhiteSpace(request.Query))
+        var nameTerm = request.Query?.Trim();
+        if (!string.IsNullOrWhiteSpace(nameTerm))
         {
             // Partial + fuzzy name match: ILIKE '%term%' is served by the pg_trgm GIN
             // index on Card.Name, so "chariz" finds "Charizard" without a full scan.
-            var pattern = $"%{EscapeLikePattern(request.Query.Trim())}%";
+            var pattern = $"%{EscapeLikePattern(nameTerm)}%";
             query = query.Where(c => EF.Functions.ILike(c.Name, pattern, LikeEscapeChar));
         }
 
@@ -98,9 +99,20 @@ public sealed class SearchCardsHandler(
         // totalCount is computed before paging so the client's pager stays correct.
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var cards = await query
-            .OrderBy(c => c.Name)
-            .ThenBy(c => c.Id)
+        // Relevance ordering (#66): with a name filter, rank by pg_trgm similarity so the
+        // closest name comes first (e.g. "raichu" ranks "Raichu" above "Alolan Raichu")
+        // instead of a blind alphabetical sort. similarity() resolves via the extensions
+        // schema on the search_path (PersistenceExtensions). Name/Id break ties so paging
+        // stays deterministic. Without a name filter there is nothing to rank against, so
+        // fall back to the alphabetical order.
+        var ordered = string.IsNullOrWhiteSpace(nameTerm)
+            ? query.OrderBy(c => c.Name).ThenBy(c => c.Id)
+            : query
+                .OrderByDescending(c => EF.Functions.TrigramsSimilarity(c.Name, nameTerm))
+                .ThenBy(c => c.Name)
+                .ThenBy(c => c.Id);
+
+        var cards = await ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);

@@ -115,6 +115,22 @@ public sealed class CatalogSearchTests : IAsyncLifetime
     }
 
     [SkippableFact]
+    public async Task Name_search_ranks_closest_match_first_by_trigram_similarity()
+    {
+        var client = Client();
+
+        // "raichu" matches both "Raichu" and "Alolan Raichu". A plain alphabetical sort
+        // would surface "Alolan Raichu" first; trigram ranking (#66) must put the closer
+        // name "Raichu" on top.
+        var page = await SearchAsync(client, "?query=raichu");
+
+        page.TotalCount.ShouldBe(2);
+        page.Items.Count.ShouldBe(2);
+        page.Items[0].Name.ShouldBe("Raichu");
+        page.Items[1].Name.ShouldBe("Alolan Raichu");
+    }
+
+    [SkippableFact]
     public async Task Reseeding_produces_no_duplicates_and_applies_updates()
     {
         // Re-run the seeder with one card's rarity changed. Idempotent upsert keyed on
@@ -147,6 +163,10 @@ public sealed class CatalogSearchTests : IAsyncLifetime
             Card("base1-5", "Charmeleon", "5", "https://img/charmeleon-large.png"),
             Card("base1-46", "Charmander", "46", "https://img/charmander-large.png"),
             Card("base1-8", "Machamp", "8", image: null),
+            // "Raichu" and "Alolan Raichu" both contain "raichu"; alphabetical would list
+            // Alolan first, so they discriminate trigram-relevance ranking from a name sort.
+            Card("base1-14", "Raichu", "14", "https://img/raichu-large.png"),
+            Card("base1-20", "Alolan Raichu", "20", "https://img/alolan-raichu-large.png"),
         ];
         return source;
     }
