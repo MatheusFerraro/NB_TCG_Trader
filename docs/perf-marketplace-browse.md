@@ -25,7 +25,8 @@ representative public-listing volume:
 
 Query shape mirrors the handler exactly: joins to Cards / CardSets (LEFT) / Games /
 AspNetUsers, `WHERE IsForSale AND NOT IsPrivate` plus the scenario's filter,
-`ORDER BY CreatedAt DESC, Id DESC`, `LIMIT 25`.
+`ORDER BY CreatedAt DESC, Id DESC`, `LIMIT :pageSize` (25 for these measurements; the
+handler's `PageSize` defaults to 25 and is capped at 100).
 
 ## Baseline plans (before the index)
 
@@ -104,11 +105,24 @@ until deep-page traffic justifies the API-shape change.
 
 ## How to reproduce
 
+Both SQL scripts live next to this doc: [`perf/marketplace-browse-seed.sql`](perf/marketplace-browse-seed.sql)
+generates the synthetic listings; [`perf/marketplace-browse-explain.sql`](perf/marketplace-browse-explain.sql)
+runs the baseline plans. The copy assumes a seeded dev DB named `nbtcg` (adjust the
+container/db names to your setup).
+
 ```bash
+# 1. Throwaway copy of the seeded dev DB (keeps real dev data clean).
 docker exec nb_tcg_trader-db-1 psql -U nbtcg -d postgres \
   -c "CREATE DATABASE nbtcg_perf TEMPLATE nbtcg;"
-# seed synthetic listings (see the perf seed script), then:
-docker exec -i nb_tcg_trader-db-1 psql -U nbtcg -d nbtcg_perf < explain.sql
+
+# 2. Seed synthetic listings, then capture the baseline plans.
+docker exec -i nb_tcg_trader-db-1 psql -U nbtcg -d nbtcg_perf \
+  < docs/perf/marketplace-browse-seed.sql
+docker exec -i nb_tcg_trader-db-1 psql -U nbtcg -d nbtcg_perf \
+  < docs/perf/marketplace-browse-explain.sql
+
+# 3. (Optional) apply the migration and re-run the explain script to see the
+#    post-index plans, then drop the throwaway DB.
 docker exec nb_tcg_trader-db-1 psql -U nbtcg -d postgres \
   -c "DROP DATABASE nbtcg_perf;"
 ```
