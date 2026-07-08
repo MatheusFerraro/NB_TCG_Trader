@@ -17,7 +17,8 @@ public sealed class RefreshHandler(
     AppDbContext db,
     UserManager<AppUser> users,
     ITokenService tokens,
-    TokenIssuer issuer)
+    TokenIssuer issuer,
+    ILogger<RefreshHandler> logger)
 {
     private static IResult InvalidToken() =>
         Results.Problem(
@@ -34,9 +35,35 @@ public sealed class RefreshHandler(
             .AsNoTracking()
             .SingleOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
 
-        // Unknown, already-used (revoked), or expired tokens are all rejected the
-        // same way (CLAUDE.md §15).
-        if (stored is null || !stored.IsActive(now))
+        // Unknown or expired tokens are rejected with the same opaque error
+        // (CLAUDE.md §15). A *revoked* token is handled specially below.
+        if (stored is null)
+        {
+            return InvalidToken();
+        }
+
+        // Reuse detection: a token that was already rotated out (RevokedAt set) is
+        // being replayed. A single-use token presented twice means either the
+        // legitimate successor or a thief holds a copy — a compromise signal. Kill
+        // the whole family so both sides lose the session, and log it for audit
+        // (CLAUDE.md §15). No token value is logged, only the user id.
+        if (stored.RevokedAt is not null)
+        {
+            var revokedFamily = await db.RefreshTokens
+                .Where(t => t.UserId == stored.UserId && t.RevokedAt == null)
+                .ExecuteUpdateAsync(
+                    setters => setters.SetProperty(t => t.RevokedAt, now),
+                    cancellationToken);
+
+            logger.LogWarning(
+                "Refresh token reuse detected for user {UserId}; revoked {RevokedCount} active token(s).",
+                stored.UserId, revokedFamily);
+
+            return InvalidToken();
+        }
+
+        // Live but past expiry: reject, same opaque error.
+        if (!stored.IsActive(now))
         {
             return InvalidToken();
         }
