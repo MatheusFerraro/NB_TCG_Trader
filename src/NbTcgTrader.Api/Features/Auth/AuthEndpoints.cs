@@ -43,6 +43,16 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .AllowAnonymous();
 
+        group.MapPost("/logout",
+                (LogoutRequest request, System.Security.Claims.ClaimsPrincipal user,
+                        LogoutHandler handler, CancellationToken ct) =>
+                    handler.HandleAsync(request, user, ct))
+            .WithName("Logout")
+            .WithValidation<LogoutRequest>()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization();
+
         group.MapGet("/me",
                 (System.Security.Claims.ClaimsPrincipal user, MeHandler handler) =>
                     handler.HandleAsync(user))

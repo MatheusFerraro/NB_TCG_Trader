@@ -81,6 +81,7 @@ public static class AuthenticationExtensions
         services.AddScoped<RegisterHandler>();
         services.AddScoped<LoginHandler>();
         services.AddScoped<RefreshHandler>();
+        services.AddScoped<LogoutHandler>();
         services.AddScoped<MeHandler>();
         services.AddScoped<UpdateProfileHandler>();
 
