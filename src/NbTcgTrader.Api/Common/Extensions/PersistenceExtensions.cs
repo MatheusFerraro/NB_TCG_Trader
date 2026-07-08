@@ -76,9 +76,20 @@ public static class PersistenceExtensions
     private static string WithExtensionsOnSearchPath(string connectionString)
     {
         var builder = new NpgsqlConnectionStringBuilder(connectionString);
+
         if (string.IsNullOrWhiteSpace(builder.SearchPath))
         {
             builder.SearchPath = "public, extensions";
+            return builder.ConnectionString;
+        }
+
+        // A caller-supplied search_path keeps its order; we only guarantee `extensions`
+        // is present (appended last) so pg_trgm functions still resolve.
+        var schemas = builder.SearchPath
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (!schemas.Contains("extensions", StringComparer.OrdinalIgnoreCase))
+        {
+            builder.SearchPath = string.Join(", ", schemas.Append("extensions"));
         }
 
         return builder.ConnectionString;

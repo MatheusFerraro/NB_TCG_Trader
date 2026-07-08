@@ -62,17 +62,22 @@ public sealed class SuggestRowCandidatesHandler(
             return Results.Unauthorized();
         }
 
-        var job = await db.ImportJobs
+        // Owner-scoped: another user's job (or a missing one) is an indistinguishable 404.
+        // Check ownership cheaply, then fetch just the one row — a large import can hold
+        // thousands of rows and none but this one is needed here.
+        var jobExists = await db.ImportJobs
             .AsNoTracking()
-            .Include(j => j.Rows)
-            .FirstOrDefaultAsync(j => j.Id == jobId && j.UserId == userId, cancellationToken);
+            .AnyAsync(j => j.Id == jobId && j.UserId == userId, cancellationToken);
 
-        if (job is null)
+        if (!jobExists)
         {
             return ListImportRowsHandler.NotFound(jobId);
         }
 
-        var row = job.Rows.FirstOrDefault(r => r.Id == rowId);
+        var row = await db.ImportRows
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == rowId && r.ImportJobId == jobId, cancellationToken);
+
         if (row is null)
         {
             return RowNotFound(jobId, rowId);
