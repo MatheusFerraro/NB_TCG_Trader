@@ -130,7 +130,7 @@ public sealed class CatalogSearchTests : IAsyncLifetime
 
         after.ShouldBe(before); // zero duplicates
         result.CardsInserted.ShouldBe(0); // every card already existed
-        result.CardsUpdated.ShouldBe(before);
+        result.CardsMatched.ShouldBe(before);
         result.SetsInserted.ShouldBe(0);
 
         var card = (await SearchAsync(Client(), "?query=charmander")).Items.ShouldHaveSingleItem();

@@ -4,16 +4,21 @@ using NbTcgTrader.Api.Common.Persistence;
 
 namespace NbTcgTrader.Api.Features.Catalog.Seeding;
 
-/// <summary>Counts from a seeding run, logged and returned to the CLI.</summary>
+/// <summary>
+/// Counts from a seeding run, logged and returned to the CLI. <c>Matched</c> is the
+/// number of existing rows re-applied by <c>ExternalId</c> (whether or not any field
+/// actually changed) — SaveChanges persists only the real diffs, so this is a "seen,
+/// not new" count rather than a write count.
+/// </summary>
 public sealed record CatalogSeedResult(
     int SetsInserted,
-    int SetsUpdated,
+    int SetsMatched,
     int CardsInserted,
-    int CardsUpdated)
+    int CardsMatched)
 {
-    public int SetsTotal => SetsInserted + SetsUpdated;
+    public int SetsTotal => SetsInserted + SetsMatched;
 
-    public int CardsTotal => CardsInserted + CardsUpdated;
+    public int CardsTotal => CardsInserted + CardsMatched;
 }
 
 /// <summary>
@@ -39,15 +44,15 @@ public sealed class CatalogSeeder(
         var game = await EnsureGameAsync(cancellationToken);
 
         var incomingSets = await source.LoadSetsAsync(cancellationToken);
-        var (setsInserted, setsUpdated, setIdsByExternalId) =
+        var (setsInserted, setsMatched, setIdsByExternalId) =
             await UpsertSetsAsync(game.Id, incomingSets, cancellationToken);
 
         logger.LogInformation(
-            "Seeded sets: {Inserted} inserted, {Updated} updated ({Total} total).",
-            setsInserted, setsUpdated, incomingSets.Count);
+            "Seeded sets: {Inserted} inserted, {Matched} matched ({Total} total).",
+            setsInserted, setsMatched, incomingSets.Count);
 
         var cardsInserted = 0;
-        var cardsUpdated = 0;
+        var cardsMatched = 0;
 
         foreach (var set in incomingSets)
         {
@@ -58,30 +63,30 @@ public sealed class CatalogSeeder(
                 continue;
             }
 
-            var (inserted, updated) =
+            var (inserted, matched) =
                 await UpsertCardsAsync(game.Id, setId, cards, cancellationToken);
             cardsInserted += inserted;
-            cardsUpdated += updated;
+            cardsMatched += matched;
 
             logger.LogDebug(
-                "Seeded set {SetId}: {Inserted} cards inserted, {Updated} updated.",
-                set.Id, inserted, updated);
+                "Seeded set {SetId}: {Inserted} cards inserted, {Matched} matched.",
+                set.Id, inserted, matched);
 
             // Release this set's tracked entities before the next set so memory stays
             // flat across the whole dataset. The captured ids remain valid POCO values.
             db.ChangeTracker.Clear();
         }
 
-        var result = new CatalogSeedResult(setsInserted, setsUpdated, cardsInserted, cardsUpdated);
+        var result = new CatalogSeedResult(setsInserted, setsMatched, cardsInserted, cardsMatched);
         logger.LogInformation(
             "Catalog seed complete: {SetsTotal} sets, {CardsTotal} cards " +
-            "({CardsInserted} inserted, {CardsUpdated} updated).",
-            result.SetsTotal, result.CardsTotal, result.CardsInserted, result.CardsUpdated);
+            "({CardsInserted} inserted, {CardsMatched} matched).",
+            result.SetsTotal, result.CardsTotal, result.CardsInserted, result.CardsMatched);
 
         return result;
     }
 
-    private async Task<(int Inserted, int Updated, Dictionary<string, int> SetIds)> UpsertSetsAsync(
+    private async Task<(int Inserted, int Matched, Dictionary<string, int> SetIds)> UpsertSetsAsync(
         int gameId, IReadOnlyList<PokemonSetData> incoming, CancellationToken cancellationToken)
     {
         // A dirty database can already hold duplicate ExternalIds (concurrent first-adds
@@ -94,14 +99,14 @@ public sealed class CatalogSeeder(
             .ToDictionary(group => group.Key, group => group.MinBy(s => s.Id)!);
 
         var inserted = 0;
-        var updated = 0;
+        var matched = 0;
 
         foreach (var incomingSet in incoming)
         {
             if (existing.TryGetValue(incomingSet.Id, out var target))
             {
                 incomingSet.ApplyTo(target, gameId);
-                updated++;
+                matched++;
             }
             else
             {
@@ -117,10 +122,10 @@ public sealed class CatalogSeeder(
 
         var setIds = existing.ToDictionary(pair => pair.Key, pair => pair.Value.Id);
         db.ChangeTracker.Clear();
-        return (inserted, updated, setIds);
+        return (inserted, matched, setIds);
     }
 
-    private async Task<(int Inserted, int Updated)> UpsertCardsAsync(
+    private async Task<(int Inserted, int Matched)> UpsertCardsAsync(
         int gameId, int setId, IReadOnlyList<PokemonCardData> cards, CancellationToken cancellationToken)
     {
         // As with sets, tolerate pre-existing duplicate ExternalIds by keeping the
@@ -132,14 +137,14 @@ public sealed class CatalogSeeder(
             .ToDictionary(group => group.Key, group => group.MinBy(c => c.Id)!);
 
         var inserted = 0;
-        var updated = 0;
+        var matched = 0;
 
         foreach (var incomingCard in cards)
         {
             if (existing.TryGetValue(incomingCard.Id, out var target))
             {
                 incomingCard.ApplyTo(target, gameId, setId);
-                updated++;
+                matched++;
             }
             else
             {
@@ -149,7 +154,7 @@ public sealed class CatalogSeeder(
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        return (inserted, updated);
+        return (inserted, matched);
     }
 
     private async Task<Game> EnsureGameAsync(CancellationToken cancellationToken)
