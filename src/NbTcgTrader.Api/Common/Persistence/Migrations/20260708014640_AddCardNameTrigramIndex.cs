@@ -17,9 +17,28 @@ namespace NbTcgTrader.Api.Common.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
+
+            // Resolve gin_trgm_ops from whatever schema pg_trgm actually lives in, rather
+            // than assuming it is on the search_path. A platform (e.g. Supabase) may
+            // pre-install the extension in a dedicated `extensions` schema that isn't
+            // searched, so an unqualified operator class would fail to resolve here.
             migrationBuilder.Sql(
-                $"CREATE INDEX IF NOT EXISTS {IndexName} " +
-                "ON \"Cards\" USING gin (\"Name\" gin_trgm_ops);");
+                $$"""
+                DO $$
+                DECLARE
+                    ext_schema text;
+                BEGIN
+                    SELECT n.nspname INTO ext_schema
+                    FROM pg_extension e
+                    JOIN pg_namespace n ON n.oid = e.extnamespace
+                    WHERE e.extname = 'pg_trgm';
+
+                    EXECUTE format(
+                        'CREATE INDEX IF NOT EXISTS {{IndexName}} '
+                        'ON "Cards" USING gin ("Name" %I.gin_trgm_ops)',
+                        ext_schema);
+                END $$;
+                """);
         }
 
         /// <inheritdoc />
