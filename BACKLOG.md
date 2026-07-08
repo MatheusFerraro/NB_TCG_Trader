@@ -244,6 +244,27 @@ lint + tests + build.
 - AC: PRs run build + tests; red on failure.
 - Labels: infra, phase-1
 
+**#64 Harden browser session security after deployment** ✅
+Kept the refresh token in `localStorage` for the MVP (decision documented in
+`docs/security/session-storage.md`) and added compensating controls: strict CSP on
+the deployed frontend, API security headers, refresh-token reuse detection with
+audit logging, and `POST /auth/logout` revocation. CORS stays locked to known
+origins.
+- AC: storage decision documented; CSP live; logout revokes; reuse/revocation
+  tested; CORS restricted; no secrets in logs.
+- Labels: security, phase-1
+
+**#64a Migrate refresh token to a first-party HttpOnly cookie**
+Child of #64. Blocked until the frontend and API share one registrable domain.
+- Move the frontend (Vercel) and API (Azure) onto `app.`/`api.` subdomains of one
+  domain, then set the refresh token as an `HttpOnly; Secure; SameSite=Lax`
+  first-party cookie server-side, with the access token kept in memory only. Drop
+  refresh-token handling from `tokenStore.ts` / `authApi.ts`. See
+  `docs/security/session-storage.md`.
+- AC: refresh token no longer reachable from JavaScript; sessions work on
+  Safari/Firefox defaults; CSRF protection added for the cookie flow.
+- Labels: security, phase-2
+
 ---
 
 ## Phase 2 — deferred (`phase-2`)
