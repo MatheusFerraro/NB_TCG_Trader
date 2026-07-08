@@ -52,6 +52,16 @@ public static class ImportEndpoints
             .Produces<UnmatchedRowsResponse>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        // Import-assist (#66 follow-up): ranked local-catalog "did you mean" suggestions for
+        // an unmatched row, so the reviewer picks a real card instead of searching by hand.
+        group.MapGet("/jobs/{jobId:int}/rows/{rowId:int}/candidates",
+                (int jobId, int rowId, ClaimsPrincipal principal,
+                        SuggestRowCandidatesHandler handler, CancellationToken ct) =>
+                    handler.HandleAsync(jobId, rowId, principal, ct))
+            .WithName("SuggestImportRowCandidates")
+            .Produces<ImportRowCandidatesResponse>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         group.MapPost("/jobs/{jobId:int}/rows/{rowId:int}/resolve",
                 (int jobId, int rowId, ResolveImportRowRequest request,
                         ClaimsPrincipal principal,

@@ -32,10 +32,12 @@ public static class ImportExtensions
         services.AddScoped<ImportRowMatcher>();
         services.AddScoped<UploadImportHandler>();
 
-        // Reconciliation handlers (#16): list unmatched rows, resolve, skip.
+        // Reconciliation handlers (#16): list unmatched rows, resolve, skip, and suggest
+        // ranked catalog candidates for an unmatched row (#66 follow-up).
         services.AddScoped<ListImportRowsHandler>();
         services.AddScoped<ResolveImportRowHandler>();
         services.AddScoped<SkipImportRowHandler>();
+        services.AddScoped<SuggestRowCandidatesHandler>();
         return services;
     }
 }
