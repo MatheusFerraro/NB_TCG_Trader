@@ -2,5 +2,12 @@
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": ["/assets/*", "*.{css,js,ico,png,svg,jpg,jpeg,webp,txt,map,json}"]
+  },
+  "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.pokemontcg.io; connect-src 'self' https://*.azurecontainerapps.io; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
   }
 }
