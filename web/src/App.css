@@ -1,67 +1,248 @@
+﻿/* ---- Application shell: sidebar + content ---- */
+
 .app-shell {
-  display: flex;
-  flex-direction: column;
   min-height: 100svh;
 }
 
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+  z-index: 60;
+  padding: 0.6rem 1rem;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
   color: var(--text-h);
   text-decoration: none;
 }
 
-.app-header nav {
+.brand-mark {
+  flex: none;
+}
+
+/* ---- Sidebar ---- */
+
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.1rem 0.8rem 1rem;
+  background: var(--nav-bg);
+  border-right: 1px solid var(--nav-border);
+  color: var(--nav-text);
+}
+
+.sidebar-brand {
+  padding: 0.25rem 0.5rem 0;
+  color: var(--nav-text-strong);
+}
+
+.sidebar-brand .brand-mark {
+  color: #fff;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  /* Long nav (admin, signed in) scrolls inside the rail, never the page. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.nav-group-title {
+  margin: 0 0 0.4rem;
+  padding: 0 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  /* 5.5:1 on --nav-bg; the darker grey this replaced sat at 3.8:1. */
+  color: #8b87a0;
+}
+
+.nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 1rem;
-}
-
-.app-header nav a {
-  color: var(--text);
+  gap: 0.7rem;
+  /* 2.5rem tall: a comfortable pointer target on desktop, widened at the
+     mobile breakpoint below where it has to survive a thumb. */
+  min-height: 2.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.55rem;
+  color: var(--nav-text);
+  font-size: 0.925rem;
   text-decoration: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.app-header nav a.active,
-.app-header nav a:hover {
-  color: var(--accent);
+.nav-row:hover {
+  background: var(--nav-row-hover);
+  color: var(--nav-text-strong);
 }
 
-.user-name {
-  color: var(--text-h);
+/* Active state is carried by fill + rail + weight, not colour alone; NavLink
+   also stamps aria-current="page" for assistive tech. */
+.nav-row.active {
+  background: var(--nav-row-active);
+  color: #fff;
   font-weight: 600;
-  /* Keep a long display name from pushing the desktop nav off-screen. */
-  max-width: 12rem;
+}
+
+.nav-row.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 1.15rem;
+  border-radius: 0 3px 3px 0;
+  background: #c084fc;
+  transform: translateY(-50%);
+}
+
+.nav-icon {
+  flex: none;
+  opacity: 0.85;
+}
+
+.nav-row.active .nav-icon {
+  opacity: 1;
+}
+
+.nav-row-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Hamburger toggle: hidden on desktop, shown at the mobile breakpoint. */
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--nav-border);
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.75rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.55rem;
+  color: var(--nav-text-strong);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background-color 0.12s ease;
+}
+
+.sidebar-user:hover {
+  background: var(--nav-row-hover);
+}
+
+.sidebar-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a855f7, #6d28d9);
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.sidebar-user-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-signout {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.65rem;
+  font: inherit;
+  font-size: 0.925rem;
+  text-align: left;
+  color: var(--nav-text);
+  background: none;
+  border: none;
+  border-radius: 0.55rem;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sidebar-signout:hover {
+  background: var(--nav-row-hover);
+  color: var(--nav-text-strong);
+}
+
+/* ---- Mobile bar + drawer chrome ---- */
+
+.mobile-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+}
+
+.mobile-bar .brand {
+  color: var(--nav-text-strong);
+}
+
+.mobile-bar .brand-mark {
+  color: #fff;
+}
+
 .nav-toggle {
-  display: none;
   position: relative;
   width: 2.75rem;
   height: 2.75rem;
+  flex: none;
   padding: 0;
   background: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--nav-border);
   border-radius: 0.5rem;
-  color: var(--text-h);
+  color: var(--nav-text-strong);
   cursor: pointer;
-}
-
-.nav-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 /* Three-bar glyph drawn from the middle bar plus its ::before/::after. */
@@ -94,55 +275,63 @@
   top: 6px;
 }
 
-@media (max-width: 48rem) {
-  .app-header {
-    position: relative;
-    flex-wrap: wrap;
+.nav-scrim {
+  display: none;
+}
+
+/* ---- Desktop: fixed rail beside the content ---- */
+
+@media (min-width: 64rem) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
   }
 
-  .nav-toggle {
-    display: block;
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100svh;
   }
 
-  /* Drawer: drops out of flow below the header, full width, hidden until open. */
-  .app-header nav {
+  .mobile-bar {
     display: none;
-    position: absolute;
-    top: 100%;
+  }
+}
+
+/* ---- Below 64rem: off-canvas drawer ---- */
+
+@media (max-width: 63.99rem) {
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
     left: 0;
-    right: 0;
-    z-index: 20;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding: 0.5rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+    z-index: 50;
+    width: min(18rem, 84vw);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(-101%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0.2s;
   }
 
-  .app-header nav.open {
-    display: flex;
+  .app-sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
   }
 
-  /* Touch-friendly rows; each link/button spans the drawer width. */
-  .app-header nav a,
-  .app-header nav .link-button {
-    padding: 0.75rem 0.85rem;
-    border-radius: 0.5rem;
+  .app-shell.menu-open .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(6, 4, 12, 0.55);
   }
 
-  .app-header nav a.active {
-    background: var(--bg);
-  }
-
-  .app-header nav .link-button {
-    text-align: left;
-  }
-
-  .user-name {
-    max-width: none;
-    white-space: normal;
+  /* Thumb-sized rows once the rail becomes a touch surface. */
+  .nav-row,
+  .sidebar-signout {
+    min-height: 2.9rem;
+    font-size: 1rem;
   }
 }
 
@@ -156,10 +345,10 @@
 }
 
 .app-main {
-  flex: 1;
-  width: min(64rem, 100%);
+  width: min(var(--content-max), 100%);
+  min-width: 0;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 2rem clamp(1rem, 4vw, 2.5rem) 4rem;
 }
 
 .page-loading {
@@ -167,20 +356,371 @@
   padding: 4rem 0;
 }
 
-.home {
-  text-align: center;
-  padding: 3rem 0;
-}
-
 .cta {
-  display: inline-block;
-  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
   padding: 0.6rem 1.4rem;
   background: var(--accent);
   color: var(--accent-contrast);
-  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
   text-decoration: none;
   font-weight: 600;
+  transition: background-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.cta:hover {
+  background: var(--accent-strong);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* ---- Homepage ---- */
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3rem, 7vw, 5rem);
+}
+
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(1.75rem, 5vw, 3.5rem);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  /* Layered, restrained: one violet wash from the top-left, a faint gold
+     counterweight bottom-right, over the page surface. No photography. */
+  background:
+    radial-gradient(70rem 32rem at 8% -20%, var(--accent-soft), transparent 62%),
+    radial-gradient(40rem 24rem at 108% 120%, var(--gold-soft), transparent 60%),
+    var(--surface);
+}
+
+/* Hairline grid, faded out so it reads as texture rather than graph paper. */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+  opacity: 0.4;
+  -webkit-mask-image: radial-gradient(60% 60% at 30% 20%, #000, transparent 75%);
+  mask-image: radial-gradient(60% 60% at 30% 20%, #000, transparent 75%);
+  pointer-events: none;
+}
+
+.hero-copy,
+.hero-fan {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hero h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.9rem, 4.4vw, 3.1rem);
+  letter-spacing: -0.025em;
+}
+
+.hero-lede {
+  margin: 0 0 1.75rem;
+  max-width: 34rem;
+  font-size: clamp(1rem, 1.4vw, 1.12rem);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.hero-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.hero-benefits li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.hero-benefits svg {
+  flex: none;
+  color: var(--accent);
+}
+
+/* Three-card fan. Rotation is static — no animation loop, and the whole group
+   is inert to the pointer so it never steals a click from the CTAs. */
+.hero-fan {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.hero-fan-card {
+  width: min(11rem, 30vw);
+  aspect-ratio: 63 / 88;
+  border-radius: 0.6rem;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.hero-fan-card-1 {
+  transform: rotate(-9deg) translate(18%, 4%);
+  z-index: 1;
+}
+
+.hero-fan-card-2 {
+  transform: translateY(-3%) scale(1.06);
+  z-index: 3;
+}
+
+.hero-fan-card-3 {
+  transform: rotate(9deg) translate(-18%, 4%);
+  z-index: 2;
+}
+
+.card-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 63 / 88;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+/* Fallback when the CDN image will not load: same box, legible stand-in. */
+.card-art-fallback {
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  text-align: center;
+  background: linear-gradient(160deg, var(--surface-2), var(--surface));
+  border: 1px solid var(--border);
+  border-radius: inherit;
+}
+
+.card-art-fallback-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.home-section h2 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  letter-spacing: -0.015em;
+}
+
+.home-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.home-section-sub {
+  margin: 0;
+  max-width: 42rem;
+}
+
+.home-section-link {
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.home-section-link:hover {
+  text-decoration: underline;
+}
+
+.featured-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.featured-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.featured-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.featured-card-art {
+  aspect-ratio: 63 / 88;
+  background: var(--bg);
+}
+
+.featured-card-art .card-art {
+  object-fit: contain;
+  padding: 0.5rem;
+  background: var(--bg);
+}
+
+.featured-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem 0.9rem;
+}
+
+.featured-card-name {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.featured-card-set,
+.featured-card-condition {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.featured-card-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.4rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+/* Explicit, always adjacent to the number: these are demo figures. */
+.featured-card-tag {
+  padding: 0.1rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-soft);
+  border: 1px solid var(--gold-soft);
+  border-radius: 999px;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.25rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: none;
+}
+
+.step {
+  padding: 1.35rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+}
+
+.step h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+.step p {
+  margin: 0;
+}
+
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.85rem;
+  border-radius: 0.6rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.home-closing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(38rem 18rem at 100% 0%, var(--accent-soft), transparent 65%),
+    var(--surface);
+}
+
+.home-closing h2 {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+}
+
+.home-closing p {
+  margin: 0;
+  max-width: 34rem;
+}
+
+@media (max-width: 56rem) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Copy first on narrow screens; the fan is decoration, so it drops below. */
+  .hero-fan {
+    order: 2;
+  }
+
+  .hero-fan-card {
+    width: min(9.5rem, 27vw);
+  }
+}
+
+@media (max-width: 30rem) {
+  .hero-actions .cta {
+    width: 100%;
+  }
 }
 
 .auth-card {
@@ -828,6 +1368,13 @@
   color: var(--accent);
   background: none;
   border: 1px solid var(--accent);
+}
+
+/* .cta's hover repaints the fill, which would swallow the outline variant. */
+.cta-outline:hover {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .button-primary {

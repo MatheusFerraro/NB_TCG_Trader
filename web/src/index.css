@@ -3,11 +3,36 @@
   --text-h: #08060d;
   --bg: #ffffff;
   --surface: #f7f6f9;
+  --surface-2: #efedf3;
   --border: #e5e4e7;
-  --accent: #aa3bff;
+  --accent: #8b26e0;
+  --accent-strong: #7211c4;
+  --accent-soft: rgba(139, 38, 224, 0.1);
   --accent-contrast: #ffffff;
+  /* Dark enough to clear 4.5:1 against the tinted pill it sits in — the
+     "Sample listing" marker is small uppercase text and must stay legible. */
+  --gold: #7a5300;
+  --gold-soft: rgba(224, 179, 77, 0.16);
   --danger: #c0264b;
   --danger-bg: rgba(192, 38, 75, 0.08);
+
+  /* Shell geometry, shared by AppShell.tsx's layout and its drawer. */
+  --sidebar-w: 15.5rem;
+  --content-max: 76rem;
+
+  /* The sidebar keeps its own near-black palette in both colour schemes: it is
+     the product's persistent frame, and a light-mode sidebar washed out the
+     brand accent it has to sit next to. */
+  --nav-bg: #0c0b11;
+  --nav-border: #232030;
+  --nav-text: #a5a1b3;
+  --nav-text-strong: #f6f5f9;
+  --nav-row-hover: rgba(255, 255, 255, 0.06);
+  --nav-row-active: rgba(168, 85, 247, 0.18);
+
+  --shadow-sm: 0 1px 2px rgba(9, 6, 16, 0.06), 0 1px 3px rgba(9, 6, 16, 0.04);
+  --shadow-md: 0 10px 24px rgba(9, 6, 16, 0.1);
+  --shadow-lg: 0 24px 48px rgba(9, 6, 16, 0.16);
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
 
@@ -20,15 +45,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
+    --text: #a1a1ad;
     --text-h: #f3f4f6;
-    --bg: #16171d;
-    --surface: #1f2028;
+    --bg: #131319;
+    --surface: #1b1c23;
+    --surface-2: #23242c;
     --border: #2e303a;
     --accent: #c084fc;
+    --accent-strong: #d8b4fe;
+    --accent-soft: rgba(192, 132, 252, 0.14);
     --accent-contrast: #16171d;
+    --gold: #e0b34d;
+    --gold-soft: rgba(224, 179, 77, 0.14);
     --danger: #f27a96;
     --danger-bg: rgba(242, 122, 150, 0.12);
+
+    --nav-bg: #0a0910;
+    --nav-border: #232030;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.55);
   }
 }
 
@@ -46,8 +83,27 @@ h2,
 h3 {
   color: var(--text-h);
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 a {
   color: var(--accent);
+}
+
+/* One shared focus ring so keyboard users get the same visible target on links,
+   buttons, and the custom nav rows. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
