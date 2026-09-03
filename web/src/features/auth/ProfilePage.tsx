@@ -76,7 +76,7 @@ export function ProfilePage() {
             value={city}
             onChange={(e) => handleFieldChange(setCity, e.target.value)}
             autoComplete="address-level2"
-            placeholder="Moncton, Ipaussu…"
+            placeholder="Your city"
           />
         </label>
         <label>
