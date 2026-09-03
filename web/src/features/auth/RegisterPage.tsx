@@ -84,7 +84,7 @@ export function RegisterPage() {
             value={city}
             onChange={(e) => setCity(e.target.value)}
             autoComplete="address-level2"
-            placeholder="Moncton, Ipaussu…"
+            placeholder="Your city"
           />
         </label>
         <label>

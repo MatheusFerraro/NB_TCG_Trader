@@ -177,7 +177,7 @@ export function MarketplaceFilters({ values, searching, onApply }: MarketplaceFi
               id={`${uid}-city`}
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="e.g. Moncton"
+              placeholder="Filter by city"
             />
           </div>
           <div className="field">
