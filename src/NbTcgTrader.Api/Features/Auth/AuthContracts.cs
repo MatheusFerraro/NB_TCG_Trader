@@ -17,6 +17,7 @@ public sealed record AuthResponse(
 public sealed record UserResponse(
     string Id,
     string Email,
+    bool EmailConfirmed,
     string DisplayName,
     string? City,
     string? Country,
@@ -28,6 +29,7 @@ public sealed record UserResponse(
     public static UserResponse From(AppUser user, IEnumerable<string> roles) => new(
         user.Id,
         user.Email ?? string.Empty,
+        user.EmailConfirmed,
         user.DisplayName,
         user.City,
         user.Country,

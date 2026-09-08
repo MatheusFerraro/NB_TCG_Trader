@@ -39,7 +39,8 @@ public sealed class RegisterValidator : AbstractValidator<RegisterRequest>
     }
 }
 
-public sealed class RegisterHandler(UserManager<AppUser> users, TokenIssuer issuer)
+public sealed class RegisterHandler(
+    UserManager<AppUser> users, TokenIssuer issuer, AuthEmailNotifier notifier)
 {
     public async Task<IResult> HandleAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
@@ -67,6 +68,15 @@ public sealed class RegisterHandler(UserManager<AppUser> users, TokenIssuer issu
                 .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray());
 
             return Results.ValidationProblem(errors);
+        }
+
+        // Queue the address-confirmation email (#69). Queued, not sent: the outbox
+        // hands it to the provider on a background thread, so a slow or unreachable
+        // provider costs the new user nothing. Sign-up succeeds either way — the
+        // address can always be confirmed later from /auth/email/verify/resend.
+        if (notifier.VerificationOnRegisterEnabled)
+        {
+            await notifier.SendVerificationAsync(user);
         }
 
         var response = await issuer.IssueAsync(user, cancellationToken);

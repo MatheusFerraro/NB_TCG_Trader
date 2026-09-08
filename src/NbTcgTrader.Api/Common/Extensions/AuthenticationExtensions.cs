@@ -85,6 +85,15 @@ public static class AuthenticationExtensions
         services.AddScoped<MeHandler>();
         services.AddScoped<UpdateProfileHandler>();
 
+        // Email-backed account recovery and address verification (issue #69). The
+        // notifier mints the Identity tokens and queues the messages; the transport
+        // itself is wired separately by AddApiEmail.
+        services.AddScoped<AuthEmailNotifier>();
+        services.AddScoped<VerifyEmailHandler>();
+        services.AddScoped<ResendVerificationHandler>();
+        services.AddScoped<ForgotPasswordHandler>();
+        services.AddScoped<ResetPasswordHandler>();
+
         // FluentValidation validators for the endpoint filter (CLAUDE.md §10).
         services.AddValidatorsFromAssemblyContaining<RegisterValidator>();
 

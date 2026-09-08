@@ -13,6 +13,7 @@ public static class RateLimitingExtensions
 {
     public const string AuthPolicy = "auth";
     public const string ImportPolicy = "import";
+    public const string EmailPolicy = "email";
 
     public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
     {
@@ -37,6 +38,16 @@ public static class RateLimitingExtensions
             {
                 limiter.PermitLimit = 10;
                 limiter.Window = TimeSpan.FromMinutes(1);
+            });
+
+            // Endpoints that put a message in someone's inbox. Tighter than the auth
+            // policy because the cost of abuse is not just CPU: every request burns a
+            // slice of the provider's free monthly quota and can be used to mail-bomb
+            // a third party who never signed up (issue #69).
+            options.AddFixedWindowLimiter(EmailPolicy, limiter =>
+            {
+                limiter.PermitLimit = 3;
+                limiter.Window = TimeSpan.FromMinutes(5);
             });
 
             // Import is expensive (file parse + catalog matching): keep it low.

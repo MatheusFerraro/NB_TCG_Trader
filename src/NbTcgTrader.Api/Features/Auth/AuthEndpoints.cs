@@ -53,6 +53,50 @@ public static class AuthEndpoints
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .RequireAuthorization();
 
+        // Email-backed verification and account recovery (#69). All anonymous — a
+        // user who cannot sign in is exactly who needs them — and rate-limited harder
+        // than the rest of the group: each call can put a message in someone's inbox
+        // and spend the provider's free quota.
+        group.MapPost("/email/verify",
+                (VerifyEmailRequest request, VerifyEmailHandler handler, CancellationToken ct) =>
+                    handler.HandleAsync(request, ct))
+            .WithName("VerifyEmail")
+            .WithValidation<VerifyEmailRequest>()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .AllowAnonymous();
+
+        group.MapPost("/email/verify/resend",
+                (ResendVerificationRequest request, ResendVerificationHandler handler,
+                        CancellationToken ct) =>
+                    handler.HandleAsync(request, ct))
+            .WithName("ResendVerificationEmail")
+            .WithValidation<ResendVerificationRequest>()
+            .Produces(StatusCodes.Status202Accepted)
+            .RequireRateLimiting(RateLimitingExtensions.EmailPolicy)
+            .AllowAnonymous();
+
+        group.MapPost("/password/forgot",
+                (ForgotPasswordRequest request, ForgotPasswordHandler handler,
+                        CancellationToken ct) =>
+                    handler.HandleAsync(request, ct))
+            .WithName("ForgotPassword")
+            .WithValidation<ForgotPasswordRequest>()
+            .Produces(StatusCodes.Status202Accepted)
+            .RequireRateLimiting(RateLimitingExtensions.EmailPolicy)
+            .AllowAnonymous();
+
+        group.MapPost("/password/reset",
+                (ResetPasswordRequest request, ResetPasswordHandler handler,
+                        CancellationToken ct) =>
+                    handler.HandleAsync(request, ct))
+            .WithName("ResetPassword")
+            .WithValidation<ResetPasswordRequest>()
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .AllowAnonymous();
+
         group.MapGet("/me",
                 (System.Security.Claims.ClaimsPrincipal user, MeHandler handler) =>
                     handler.HandleAsync(user))

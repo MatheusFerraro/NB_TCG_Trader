@@ -54,6 +54,10 @@ try
     // EF Core (Postgres) + ASP.NET Core Identity stores.
     builder.Services.AddApiPersistence();
 
+    // Transactional email: provider-backed sender + background outbox (#69).
+    // Registered before auth so the Auth slice's notifier can depend on it.
+    builder.Services.AddApiEmail(builder.Configuration);
+
     // JWT bearer auth + Auth-slice services and validators.
     builder.Services.AddApiAuthentication(builder.Configuration);
 
