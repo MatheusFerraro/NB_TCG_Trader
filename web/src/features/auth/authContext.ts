@@ -10,6 +10,12 @@ export interface AuthContextValue {
   register: (request: RegisterRequest) => Promise<void>
   /** PUT /auth/me; on success the context user reflects the saved profile. */
   updateProfile: (request: UpdateProfileRequest) => Promise<void>
+  /**
+   * Re-reads /auth/me into the context. For state the server changed outside a
+   * form the user submitted here — e.g. emailConfirmed after following the
+   * verification link. No-op when nobody is signed in.
+   */
+  refreshUser: () => Promise<void>
   logout: () => void
 }
 

@@ -2,6 +2,8 @@
 export interface User {
   id: string
   email: string
+  /** Whether the account email has been confirmed via the emailed link. */
+  emailConfirmed: boolean
   displayName: string
   city: string | null
   country: string | null
@@ -54,4 +56,30 @@ export interface RegisterRequest {
   contactEmail?: string
   discordHandle?: string
   instagramHandle?: string
+}
+
+/** POST /auth/email/verify body (VerifyEmail.cs). Both values come from the emailed link. */
+export interface VerifyEmailRequest {
+  userId: string
+  token: string
+}
+
+/** POST /auth/email/verify/resend body (ResendVerificationEmail.cs). */
+export interface ResendVerificationRequest {
+  email: string
+}
+
+/** POST /auth/password/forgot body (ForgotPassword.cs). */
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+/**
+ * POST /auth/password/reset body (ResetPassword.cs). `email` and `token` are
+ * carried by the emailed link; the token is single-use and short-lived.
+ */
+export interface ResetPasswordRequest {
+  email: string
+  token: string
+  newPassword: string
 }

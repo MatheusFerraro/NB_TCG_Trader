@@ -55,6 +55,22 @@ afterEach(() => {
 })
 
 describe('apiFetch', () => {
+  it('resolves a bodiless 202 instead of choking on the empty stream', async () => {
+    const { apiFetch } = await loadClient()
+    // What /auth/password/forgot actually returns: accepted, nothing to parse.
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 202 }))
+
+    await expect(apiFetch('/auth/password/forgot', { method: 'POST', auth: false }))
+      .resolves.toBeUndefined()
+  })
+
+  it('resolves a 200 that carries no JSON content type', async () => {
+    const { apiFetch } = await loadClient()
+    fetchMock.mockResolvedValueOnce(new Response('', { status: 200 }))
+
+    await expect(apiFetch('/health', { auth: false })).resolves.toBeUndefined()
+  })
+
   it('attaches the Bearer token to authenticated requests', async () => {
     const { apiFetch, setTokens } = await loadClient()
     setTokens('access-1', 'refresh-1')

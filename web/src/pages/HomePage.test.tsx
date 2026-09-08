@@ -11,6 +11,7 @@ function makeUser(): User {
   return {
     id: 'u1',
     email: 'user@example.com',
+    emailConfirmed: true,
     displayName: 'Ash Ketchum',
     city: null,
     country: null,
@@ -28,6 +29,7 @@ function renderHome(status: AuthStatus) {
     login: async () => {},
     register: async () => {},
     updateProfile: async () => {},
+    refreshUser: async () => {},
     logout: () => {},
   }
   return render(

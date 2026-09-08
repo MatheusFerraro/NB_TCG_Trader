@@ -73,6 +73,9 @@ export function LoginPage() {
         </button>
       </form>
       <p>
+        <Link to="/forgot-password">Forgot your password?</Link>
+      </p>
+      <p>
         No account yet? <Link to="/register">Create one</Link>
       </p>
     </section>

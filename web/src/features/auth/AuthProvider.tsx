@@ -60,14 +60,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, user }))
   }, [])
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const user = await authApi.fetchMe()
+      setState({ status: 'authenticated', user })
+    } catch {
+      // Anonymous visitors reach the verification page too — following the link
+      // without being signed in is normal, and not a failure worth surfacing.
+    }
+  }, [])
+
   const logout = useCallback(() => {
     authApi.logout()
     setState({ status: 'anonymous', user: null })
   }, [])
 
   const value = useMemo(
-    () => ({ status: state.status, user: state.user, login, register, updateProfile, logout }),
-    [state, login, register, updateProfile, logout],
+    () => ({
+      status: state.status,
+      user: state.user,
+      login,
+      register,
+      updateProfile,
+      refreshUser,
+      logout,
+    }),
+    [state, login, register, updateProfile, refreshUser, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

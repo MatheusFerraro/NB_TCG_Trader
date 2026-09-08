@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError } from '../../lib/apiClient'
 import { useAuth } from './authContext'
+import { UnconfirmedEmailNotice } from './UnconfirmedEmailNotice'
 
 /**
  * Profile settings: the public seller fields (display name, location, contact
@@ -56,6 +57,7 @@ export function ProfilePage() {
   return (
     <section className="auth-card">
       <h1>Profile</h1>
+      {user && !user.emailConfirmed && <UnconfirmedEmailNotice email={user.email} />}
       <p className="profile-intro">
         Buyers see these details on your marketplace listings. Share at least one
         contact channel so they can actually reach you.

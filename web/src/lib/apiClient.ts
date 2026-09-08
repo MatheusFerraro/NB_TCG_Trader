@@ -90,6 +90,19 @@ async function doRefresh(): Promise<AuthResponse | null> {
   return auth
 }
 
+/**
+ * True when the response cannot contain a JSON payload: an explicit zero length,
+ * or a success with no JSON content type at all. Content-Length is absent under
+ * chunked encoding, so the content-type check carries the rest.
+ */
+function isEmptyBody(response: Response): boolean {
+  if (response.headers.get('Content-Length') === '0') {
+    return true
+  }
+  const contentType = response.headers.get('Content-Type')
+  return contentType === null || !contentType.includes('json')
+}
+
 export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   /** JSON-serialized unless it is a FormData (multipart upload). */
   body?: unknown
@@ -100,7 +113,7 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
 /**
  * JSON fetch wrapper: prefixes the API base URL, attaches the Bearer token,
  * and on a 401 refreshes the session once and retries. Throws ApiError on any
- * non-2xx response; returns the parsed JSON body (undefined for 204).
+ * non-2xx response; returns the parsed JSON body (undefined when there is none).
  * A FormData body is sent as-is so the browser sets the multipart boundary.
  */
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
@@ -136,7 +149,10 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     throw new ApiError(response.status, await parseProblem(response))
   }
 
-  if (response.status === 204) {
+  // Not every success carries a body: 204 from the mutating endpoints, and a
+  // bodiless 202 from the fire-and-forget email routes (/auth/password/forgot).
+  // Parsing those as JSON throws on an empty stream, so detect them first.
+  if (response.status === 204 || response.status === 205 || isEmptyBody(response)) {
     return undefined as T
   }
 

@@ -2,9 +2,12 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './AppShell'
 import { AdminLayout } from './features/admin/AdminLayout'
 import { AuthProvider } from './features/auth/AuthProvider'
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { ProfilePage } from './features/auth/ProfilePage'
 import { RegisterPage } from './features/auth/RegisterPage'
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
+import { VerifyEmailPage } from './features/auth/VerifyEmailPage'
 import { AddCardPage } from './pages/AddCardPage'
 import { AdminActivityPage } from './pages/AdminActivityPage'
 import { AdminAuditLogPage } from './pages/AdminAuditLogPage'
@@ -31,6 +34,11 @@ function App() {
             <Route index element={<HomePage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
+            {/* Reached from an emailed link, so necessarily public: the people who
+                need them are the ones who cannot sign in (#69). */}
+            <Route path="verify-email" element={<VerifyEmailPage />} />
+            <Route path="forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="reset-password" element={<ResetPasswordPage />} />
             {/* Public: anonymous buyers can browse and open listings. */}
             <Route path="marketplace" element={<MarketplacePage />} />
             <Route path="marketplace/:itemId" element={<ListingDetailPage />} />

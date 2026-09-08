@@ -28,6 +28,12 @@ export async function register(request: RegisterRequest): Promise<User> {
   return auth.user
 }
 
+/** Re-reads the signed-in user. Used after a change the server made on its own,
+ * such as confirming an email address. */
+export function fetchMe(): Promise<User> {
+  return apiFetch<User>('/auth/me')
+}
+
 /** Replaces the public profile; returns the updated user (same shape as /auth/me). */
 export function updateProfile(request: UpdateProfileRequest): Promise<User> {
   return apiFetch<User>('/auth/me', { method: 'PUT', body: request })

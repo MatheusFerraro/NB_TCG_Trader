@@ -11,6 +11,7 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 'u1',
     email: 'user@example.com',
+    emailConfirmed: true,
     displayName: 'Ash Ketchum',
     city: 'Moncton',
     country: 'Canada',
@@ -29,6 +30,7 @@ function renderShell(status: AuthStatus, user: User | null, path = '/marketplace
     login: async () => {},
     register: async () => {},
     updateProfile: async () => {},
+    refreshUser: async () => {},
     logout: () => {},
   }
   return render(
