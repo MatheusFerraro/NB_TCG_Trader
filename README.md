@@ -98,6 +98,58 @@ ASP.NET Core API (.NET 9, Docker, Azure Container Apps)
    contact handles: email, Discord, or Instagram.
 7. **Admin hub** — role-gated dashboard, user management, lock/unlock workflow,
    coarse activity view, and immutable audit log.
+8. **Verify an address / recover an account** — transactional email backs
+   address confirmation and password reset; the reset revokes every existing
+   session and notifies the account owner. See
+   [Transactional email](#transactional-email).
+
+## Transactional email
+
+Address verification and password reset are backed by a swappable
+`IEmailSender` behind a background outbox, so a slow provider never sits on a
+request thread and a provider outage never fails a registration.
+
+**Provider: [Resend](https://resend.com).** Chosen for the MVP because its free
+tier covers this app's volume without a card on file, it authenticates domains
+with SPF/DKIM, and it exposes a plain JSON API (no SMTP credentials to manage).
+
+| | Free tier (as documented on issue #69) |
+|---|---|
+| Monthly cap | 3,000 emails |
+| Daily cap | 100 emails |
+| Account approval | Not required for the sandbox sender |
+| Custom domain | Required to send from your own address; `onboarding@resend.dev` works for testing |
+| Upgrade path | Paid tier lifts the caps; swapping to Brevo (300/day) or MailerSend (500/month) means one new `IEmailSender` and a config change — no slice touches the provider |
+
+> Provider pricing moves. Re-check Resend's pricing page before relying on
+> these numbers; they were taken from issue #69 and could not be re-verified
+> from the build environment, which has no egress to `resend.com`.
+
+**Local development sends nothing.** The default `Email:Provider=FileDrop`
+renders each message to `./sent-emails/*.html` (gitignored) instead of
+delivering it — open the file and click the link to walk the whole flow with no
+provider account and no risk of mailing a real person. `Email:Enabled=false` is
+a separate kill switch that drops every message, for when the free quota runs
+out; the endpoints keep answering normally either way.
+
+Configuration lives under the `Email` section — see
+[.env.example](.env.example). `Email:ApiKey` is a secret and comes only from
+user-secrets or the environment.
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /auth/email/verify` | Confirm an address from the emailed link |
+| `POST /auth/email/verify/resend` | Request a fresh confirmation link |
+| `POST /auth/password/forgot` | Start a reset — always `202`, never reveals whether the account exists |
+| `POST /auth/password/reset` | Complete the reset with the emailed token |
+
+Tokens come from ASP.NET Core Identity's own providers: time-limited, bound to
+the user's security stamp, and single-use. They are never logged. The three
+`/email` and `/password` entry points that put a message in someone's inbox
+carry a tighter rate limit (3 per 5 minutes) than the rest of the auth group.
+
+Email confirmation is **not** enforced at sign-in in the MVP — an unconfirmed
+user sees a nudge on their profile rather than a locked account.
 
 ## Engineering Depth
 
@@ -120,7 +172,10 @@ ASP.NET Core API (.NET 9, Docker, Azure Container Apps)
 - Server-side ownership checks for binder items, imports, and profile data.
 - Role-gated admin endpoints with audit logging.
 - CORS restricted to known frontend origins; rate limits on auth/import
-  endpoints plus a global per-IP cap.
+  endpoints, a tighter limit on the email-sending endpoints, plus a global
+  per-IP cap.
+- Password reset never reveals whether an account exists, revokes every
+  outstanding refresh token, clears the lockout, and emails a security notice.
 - ProblemDetails responses without raw stack traces.
 - File upload allowlists, size caps, row caps, and CSV formula-injection
   protection for generated spreadsheet content.

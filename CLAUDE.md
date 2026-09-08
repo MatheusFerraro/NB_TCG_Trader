@@ -59,6 +59,7 @@ cards for sale and connect with local buyers.
 | API docs / UI    | Scalar (OpenAPI)                                    |
 | Rate limiting    | Built-in ASP.NET Core rate limiting                 |
 | Card data        | pokemontcg.io (primary), TCGdex (free fallback)     |
+| Email            | Resend free tier via `IEmailSender`; file-drop in dev |
 
 **MediatR is optional.** Slices are implemented with minimal-API endpoint
 classes calling handler classes directly; FluentValidation runs via an endpoint
@@ -104,6 +105,7 @@ schema.
 │       │   ├── Import/          # CSV upload + reconcile
 │       │   └── Marketplace/
 │       ├── Common/
+│       │   ├── Email/           # IEmailSender, templates, outbox
 │       │   ├── Persistence/     # AppDbContext, migrations, configs
 │       │   ├── Errors/          # ProblemDetails helpers
 │       │   ├── Filters/         # validation endpoint filter
@@ -234,6 +236,12 @@ card_name, set, card_number, quantity, condition, price, for_sale
   proxy hop (`ForwardLimit = 1`, known-proxy lists cleared) so the hosted
   ingress (ACA/Fly/Render) supplies the client IP/scheme and clients cannot
   spoof rate-limit partitions.
+- **Email:** transactional only, behind `IEmailSender` (`Common/Email/`) and a
+  background outbox so a slow provider never blocks a request. `Email:Provider`
+  selects Resend (deployed) or FileDrop (dev default — writes to a gitignored
+  `./sent-emails`, sends nothing). `Email:Enabled=false` is a kill switch for an
+  exhausted free quota; the flows still answer normally. Never log a message
+  body, a token, or the API key.
 - **API docs:** Scalar UI over the OpenAPI document (Swashbuckle is no longer in
   the default template).
 - **Config/secrets:** connection string, JWT signing key, and card-API key come
@@ -299,6 +307,12 @@ card_name, set, card_number, quantity, condition, price, for_sale
 - The JWT signing key comes from config/secret, is at least 256-bit, is never
   committed, and differs per environment.
 - Enforce a sane password policy via Identity options.
+- Email verification and password reset use ASP.NET Core Identity's own token
+  providers — never hand-rolled tokens. Reset and verification responses must
+  never reveal whether an address is registered (always `202`), a completed
+  reset revokes every outstanding refresh token, and the emailed link's origin
+  comes from `Email:FrontendBaseUrl`, never from a request header. Sign-in is
+  not gated on a confirmed address in the MVP.
 
 **Authorization**
 - Every mutating endpoint requires `[Authorize]`.

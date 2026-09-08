@@ -220,6 +220,23 @@ trigram `similarity()` instead of alphabetical.
 similarity (typo-tolerant `%` + exact-number boost); owner-scoped, real `Card` ids only,
 no external call. Enabling change: `extensions` schema added to the connection
 search_path so pg_trgm functions resolve. pgvector remains deferred to phase 2.
+**#69 Free transactional email for auth and notifications** ✅
+Provider-agnostic `IEmailSender` (`Common/Email/`) with a background outbox, so a slow
+provider never sits on a request thread. **Resend** chosen for the free tier (3,000/mo,
+100/day per issue #69 — re-verify before deploy); **FileDrop** is the local default and
+renders messages to gitignored `./sent-emails` instead of sending. `Email:Enabled=false`
+is a kill switch for an exhausted quota. Four anonymous endpoints — `/auth/email/verify`,
+`/auth/email/verify/resend`, `/auth/password/forgot`, `/auth/password/reset` — plus the
+React screens and a "Forgot your password?" link. Tokens come from Identity's own
+providers and are never logged.
+- AC: forgot-password answers identically for known and unknown addresses; reset tokens
+  expire, are single-use, and are validated by Identity; a completed reset revokes every
+  refresh token, clears the lockout, and emails a security notice; email-sending endpoints
+  are rate-limited to 3 per 5 minutes; local dev sends nothing by default; secrets come
+  only from env/user-secrets.
+- Labels: infra, backend, auth
+> Deliberately out of scope: sign-in is **not** gated on a confirmed address in the MVP —
+> an unconfirmed user sees a nudge, not a locked account.
 
 ---
 
