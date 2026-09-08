@@ -52,6 +52,12 @@ public sealed class CatalogEndpointsTests
             builder.UseSetting("Jwt:SigningKey", TestJwt.SigningKey);
             builder.UseSetting("Jwt:Issuer", TestJwt.Issuer);
             builder.UseSetting("Jwt:Audience", TestJwt.Audience);
+
+            // Registering a user now queues a verification email (#69). Tests do not
+            // exercise it, so pin the kill switch off: nothing is rendered, nothing
+            // is written to a drop directory, and a developer's user-secrets cannot
+            // point a test run at a real provider.
+            builder.UseSetting("Email:Enabled", "false");
             builder.UseSetting("Catalog:PlaceholderImageUrl", Placeholder);
 
             // Developer user-secrets may set Admin:SeedEmails; pin it empty so the
