@@ -59,6 +59,14 @@ appsettings.*.local.json
 secrets.json
 
 ## ---------------------------------------------------------------------------
+## Local email drop (#69)
+## ---------------------------------------------------------------------------
+## The FileDrop email sender renders messages here instead of sending them. The
+## files contain single-use verification / password-reset tokens, so they never
+## belong in the repository.
+sent-emails/
+
+## ---------------------------------------------------------------------------
 ## OS cruft
 ## ---------------------------------------------------------------------------
 .DS_Store
